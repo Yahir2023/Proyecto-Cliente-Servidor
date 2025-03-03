@@ -1,18 +1,20 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 
-//cargamos el archivo de rutas
+// Servir archivos estáticos desde la carpeta 'public'
+app.use(express.static(path.join(__dirname, 'public')));
 
+// Cargar el archivo de rutas
 app.use(require('./routes/Usuarios'));
 app.use(require('./routes/Pagos'));
 
-
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log('El servidor escucha en el puerto '+ PORT);
+    console.log('El servidor escucha en el puerto ' + PORT);
 });
 
 module.exports = app;

@@ -1,27 +1,10 @@
 require("dotenv").config();
 const express = require("express");
-const mysql = require("mysql2");
 const bodyParser = require("body-parser");
+const { connection: db } = require("./config/config.db");
 
 const app = express();
 app.use(bodyParser.json());
-
-// Configurar conexión a MySQL
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root", // Cambia por tu usuario de MySQL
-    password: "", // Cambia por tu contraseña de MySQL
-    database: "cinedb"
-});
-
-// Conectar a MySQL
-db.connect(err => {
-    if (err) {
-        console.error("Error conectando a la base de datos:", err);
-    } else {
-        console.log("Conectado a MySQL");
-    }
-});
 
 // Ruta para inicio de sesión
 app.post("/login", (req, res) => {

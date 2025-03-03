@@ -31,7 +31,7 @@
     <script>
         async function cargarUsuarios() {
             try {
-                const response = await fetch("http://127.0.0.1:3000/usuarios"); // Usar 127.0.0.1 en lugar de localhost
+                const response = await fetch("http://localhost:3000/routes/Usuarios"); // Usar 127.0.0.1 en lugar de localhost
                 const data = await response.json();
                 console.log("Datos recibidos:", data); // Depuración
 
