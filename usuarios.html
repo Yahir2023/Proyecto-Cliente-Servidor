@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Usuarios</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        table { width: 80%; margin: auto; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+    </style>
+</head>
+<body>
+
+    <h2>Usuarios Registrados</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Correo</th>
+            </tr>
+        </thead>
+        <tbody id="usuariosTabla">
+            <!-- Los usuarios se insertarán aquí -->
+        </tbody>
+    </table>
+
+    <script>
+        async function cargarUsuarios() {
+            try {
+                const response = await fetch("http://127.0.0.1:3000/usuarios"); // Usar 127.0.0.1 en lugar de localhost
+                const data = await response.json();
+                console.log("Datos recibidos:", data); // Depuración
+
+                if (data.success && data.usuarios.length > 0) {
+                    const tabla = document.getElementById("usuariosTabla");
+                    let filas = "";
+
+                    data.usuarios.forEach(user => {
+                        filas += `
+                            <tr>
+                                <td>${user.id_usuario}</td>
+                                <td>${user.nombre}</td>
+                                <td>${user.apellido}</td>
+                                <td>${user.correo}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tabla.innerHTML = filas;
+                } else {
+                    alert("No hay usuarios en la base de datos");
+                }
+            } catch (error) {
+                console.error("Error de conexión:", error);
+                alert("No se pudo conectar con el servidor");
+            }
+        }
+
+        // Llamar a la función al cargar la página
+        window.onload = cargarUsuarios;
+    </script>
+
+</body>
+</html>
