@@ -11,6 +11,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Cargar el archivo de rutas
 app.use(require('./routes/Usuarios'));
 app.use(require('./routes/Pagos'));
+app.use(require('./routes/Peliculas'));
+app.use(require('./routes/Promociones'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

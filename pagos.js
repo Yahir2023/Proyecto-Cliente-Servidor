@@ -2,15 +2,7 @@
 const express = require('express');
 const mysql = require('mysql');
 const app = express();
-
-// Configuración del puerto y de la base de datos
-const port = process.env.PORT || 3000;
-const dbConfig = {
-  host: 'localhost',   // DBHOST
-  user: 'root',        // DBUSER
-  password: '',        // DBPASS
-  database: 'cinedb'   // DBNAME
-};
+const { connection: db } = require("./config/config.db");
 
 // Middleware para parsear JSON
 app.use(express.json());
