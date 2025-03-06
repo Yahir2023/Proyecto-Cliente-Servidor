@@ -9,10 +9,10 @@ app.use(express.json());
 const { connection } = require("../config/config.db");
 
 /**
- * Obtener películas con filtros opcionales por:
- * - título (ejemplo: ?titulo=Avengers)
- * - género (ejemplo: ?genero=Accion)
- * - clasificación (ejemplo: ?clasificacion=PG)
+ Obtener películas con filtros opcionales por:
+ título (ejemplo: ?titulo=Avengers)
+ género (ejemplo: ?genero=Accion)
+ clasificación (ejemplo: ?clasificacion=PG)
  */
 const getPeliculas = (req, res) => {
   const { titulo, genero, clasificacion } = req.query;
@@ -42,16 +42,14 @@ const getPeliculas = (req, res) => {
 };
 
 /**
- * Insertar una nueva película.
- * Se espera un body en formato JSON con:
- * {
- *   "titulo": "string",
- *   "duracion": "number",
- *   "clasificacion": "string",
- *   "sinopsis": "string",
- *   "director": "string",
- *   "genero": "string"
- * }
+ {
+ "titulo": "string",
+ "duracion": "number",
+ "clasificacion": "string",
+ "sinopsis": "string",
+ "director": "string",
+ "genero": "string"
+}
  */
 const postPelicula = (req, res) => {
   const { titulo, duracion, clasificacion, sinopsis, director, genero } = req.body;
