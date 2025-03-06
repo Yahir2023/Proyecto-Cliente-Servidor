@@ -1,37 +1,36 @@
-// routes/reservas.js
 const express = require('express');
 const router = express.Router();
-const { connection } = require('../config/config.db');
+const mysql = require('mysql');
+const { connection } = require("../config/config.db");
 
-// Endpoint para obtener historial de reservas por usuario
-router.get('/reservas/:usuarioId', async (req, res) => {
-  try {
-    const [results] = await connection.execute(
-      `
-      SELECT r.*, f.fecha_hora, p.titulo as pelicula, s.nombre as sala 
-      FROM reservas r
-      JOIN disponibilidad_asientos da ON r.id_disponibilidad = da.id_disponibilidad
-      JOIN funciones f ON da.id_funcion = f.id_funcion
-      JOIN peliculas p ON f.id_pelicula = p.id_pelicula
-      JOIN salas s ON f.id_sala = s.id_sala
-      WHERE r.id_usuario = ?
-      `,
-      [req.params.usuarioId]
-    );
+// Endpoint para obtener historial de reservas
+router.get('/reservas/:usuarioId', (req, res) => {
+  connection.query(
+    `SELECT r.*, f.fecha_hora, p.titulo as pelicula, s.nombre as sala 
+    FROM reservas r
+    JOIN disponibilidad_asientos da ON r.id_disponibilidad = da.id_disponibilidad
+    JOIN funciones f ON da.id_funcion = f.id_funcion
+    JOIN peliculas p ON f.id_pelicula = p.id_pelicula
+    JOIN salas s ON f.id_sala = s.id_sala
+    WHERE r.id_usuario = ?`, 
+    [req.params.usuarioId], 
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: 'Error al obtener el historial' });
+      }
 
-    if (results.length === 0) {
-      return res.status(200).json({ message: 'No tiene reservas' });
+      if (results.length === 0) {
+        return res.status(200).json({ message: 'No tiene reservas' });
+      }
+
+      res.status(200).json(results);
     }
-
-    res.status(200).json(results);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al obtener el historial' });
-  }
+  );
 });
 
 // Endpoint para crear nueva reserva
-router.post('/reservas', async (req, res) => {
+router.post('/reservas', (req, res) => {
   const { usuarioId, disponibilidadId } = req.body;
 
   if (!usuarioId || !disponibilidadId) {
@@ -39,50 +38,90 @@ router.post('/reservas', async (req, res) => {
   }
 
   let conn;
-  try {
-    // Obtener una conexión del pool para manejar transacciones
-    conn = await connection.getConnection();
-    await conn.beginTransaction();
-
-    // Verificar disponibilidad del asiento (bloqueando la fila)
-    const [disponibilidad] = await conn.execute(
-      'SELECT estado FROM disponibilidad_asientos WHERE id_disponibilidad = ? FOR UPDATE',
-      [disponibilidadId]
-    );
-
-    if (disponibilidad.length === 0 || disponibilidad[0].estado !== 'disponible') {
-      await conn.rollback();
-      conn.release();
-      return res.status(400).json({ error: 'Asiento no disponible' });
+  connection.getConnection((err, connection) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error al obtener la conexión' });
     }
+    conn = connection;
 
-    // Crear reserva
-    await conn.execute(
-      'INSERT INTO reservas (id_usuario, id_disponibilidad, estado) VALUES (?, ?, "activa")',
-      [usuarioId, disponibilidadId]
-    );
+    conn.beginTransaction((err) => {
+      if (err) {
+        conn.release();
+        console.error(err);
+        return res.status(500).json({ error: 'Error al iniciar transacción' });
+      }
 
-    // Actualizar disponibilidad del asiento a "reservado"
-    await conn.execute(
-      'UPDATE disponibilidad_asientos SET estado = "reservado" WHERE id_disponibilidad = ?',
-      [disponibilidadId]
-    );
+      // Verificar disponibilidad del asiento
+      conn.query(
+        'SELECT estado FROM disponibilidad_asientos WHERE id_disponibilidad = ? FOR UPDATE',
+        [disponibilidadId],
+        (error, disponibilidad) => {
+          if (error) {
+            return conn.rollback(() => {
+              conn.release();
+              console.error(error);
+              return res.status(500).json({ error: 'Error al verificar disponibilidad' });
+            });
+          }
 
-    await conn.commit();
-    conn.release();
-    res.status(201).json({ message: 'Reserva creada exitosamente' });
-  } catch (error) {
-    console.error(error);
-    if (conn) {
-      await conn.rollback();
-      conn.release();
-    }
-    res.status(500).json({ error: 'Error al crear la reserva' });
-  }
+          if (disponibilidad.length === 0 || disponibilidad[0].estado !== 'disponible') {
+            return conn.rollback(() => {
+              conn.release();
+              return res.status(400).json({ error: 'Asiento no disponible' });
+            });
+          }
+
+          // Crear reserva
+          conn.query(
+            'INSERT INTO reservas (id_usuario, id_disponibilidad, estado) VALUES (?, ?, "activa")',
+            [usuarioId, disponibilidadId],
+            (error) => {
+              if (error) {
+                return conn.rollback(() => {
+                  conn.release();
+                  console.error(error);
+                  return res.status(500).json({ error: 'Error al crear la reserva' });
+                });
+              }
+
+              // Actualizar disponibilidad del asiento
+              conn.query(
+                'UPDATE disponibilidad_asientos SET estado = "reservado" WHERE id_disponibilidad = ?',
+                [disponibilidadId],
+                (error) => {
+                  if (error) {
+                    return conn.rollback(() => {
+                      conn.release();
+                      console.error(error);
+                      return res.status(500).json({ error: 'Error al actualizar disponibilidad' });
+                    });
+                  }
+
+                  conn.commit((err) => {
+                    if (err) {
+                      return conn.rollback(() => {
+                        conn.release();
+                        console.error(err);
+                        return res.status(500).json({ error: 'Error al confirmar la reserva' });
+                      });
+                    }
+
+                    conn.release();
+                    res.status(201).json({ message: 'Reserva creada exitosamente' });
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
 });
 
 // Endpoint para eliminar una reserva
-router.delete('/reservas/:id_reserva', async (req, res) => {
+router.delete('/reservas/:id_reserva', (req, res) => {
   const { id_reserva } = req.params;
 
   if (!id_reserva) {
@@ -90,45 +129,86 @@ router.delete('/reservas/:id_reserva', async (req, res) => {
   }
 
   let conn;
-  try {
-    conn = await connection.getConnection();
-    await conn.beginTransaction();
-
-    // Verificar si la reserva existe
-    const [reserva] = await conn.execute(
-      'SELECT * FROM reservas WHERE id_reserva = ?',
-      [id_reserva]
-    );
-
-    if (reserva.length === 0) {
-      await conn.rollback();
-      conn.release();
-      return res.status(404).json({ error: 'Reserva no encontrada' });
+  connection.getConnection((err, connection) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Error al obtener la conexión' });
     }
+    conn = connection;
 
-    // Eliminar la reserva
-    await conn.execute(
-      'DELETE FROM reservas WHERE id_reserva = ?',
-      [id_reserva]
-    );
+    conn.beginTransaction((err) => {
+      if (err) {
+        conn.release();
+        console.error(err);
+        return res.status(500).json({ error: 'Error al iniciar transacción' });
+      }
 
-    // Actualizar la disponibilidad del asiento a "disponible"
-    await conn.execute(
-      'UPDATE disponibilidad_asientos SET estado = "disponible" WHERE id_disponibilidad = ?',
-      [reserva[0].id_disponibilidad]
-    );
+      // Verificar si la reserva existe
+      conn.query(
+        'SELECT * FROM reservas WHERE id_reserva = ?',
+        [id_reserva],
+        (error, reserva) => {
+          if (error) {
+            return conn.rollback(() => {
+              conn.release();
+              console.error(error);
+              return res.status(500).json({ error: 'Error al verificar la reserva' });
+            });
+          }
 
-    await conn.commit();
-    conn.release();
-    res.status(200).json({ message: 'Reserva eliminada exitosamente' });
-  } catch (error) {
-    console.error(error);
-    if (conn) {
-      await conn.rollback();
-      conn.release();
-    }
-    res.status(500).json({ error: 'Error al eliminar la reserva' });
-  }
+          if (reserva.length === 0) {
+            return conn.rollback(() => {
+              conn.release();
+              return res.status(404).json({ error: 'Reserva no encontrada' });
+            });
+          }
+
+          // Eliminar la reserva
+          conn.query(
+            'DELETE FROM reservas WHERE id_reserva = ?',
+            [id_reserva],
+            (error) => {
+              if (error) {
+                return conn.rollback(() => {
+                  conn.release();
+                  console.error(error);
+                  return res.status(500).json({ error: 'Error al eliminar la reserva' });
+                });
+              }
+
+              // Actualizar la disponibilidad del asiento
+              conn.query(
+                'UPDATE disponibilidad_asientos SET estado = "disponible" WHERE id_disponibilidad = ?',
+                [reserva[0].id_disponibilidad],
+                (error) => {
+                  if (error) {
+                    return conn.rollback(() => {
+                      conn.release();
+                      console.error(error);
+                      return res.status(500).json({ error: 'Error al actualizar disponibilidad' });
+                    });
+                  }
+
+                  conn.commit((err) => {
+                    if (err) {
+                      return conn.rollback(() => {
+                        conn.release();
+                        console.error(err);
+                        return res.status(500).json({ error: 'Error al confirmar la eliminación' });
+                      });
+                    }
+
+                    conn.release();
+                    res.status(200).json({ message: 'Reserva eliminada exitosamente' });
+                  });
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
 });
 
 module.exports = router;
