@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cine - Pago</title>
+  <!-- SDK de PayPal (reemplaza YOUR_CLIENT_ID por tu Client ID real) -->
+  <script src="https://www.paypal.com/sdk/js?client-id=YOUR_CLIENT_ID&currency=MXN"></script>
+  <style>
+    /* Estilos básicos para la vista */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .ticket-selection, .payment-method-selection {
+      margin-bottom: 20px;
+    }
+    .ticket-selection p, .payment-method-selection p {
+      font-size: 1.1em;
+      margin-bottom: 10px;
+    }
+    .ticket-selection label, .payment-method-selection label {
+      margin-right: 15px;
+      font-size: 1em;
+      color: #555;
+    }
+    .ticket-selection input[type="radio"],
+    .payment-method-selection input[type="radio"] {
+      margin-right: 5px;
+    }
+    .quantity {
+      margin-top: 10px;
+    }
+    .quantity label {
+      margin-right: 5px;
+      font-size: 1em;
+      color: #555;
+    }
+    .paypal-button-container,
+    #card-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+    /* Estilos para el formulario de tarjeta (simulado) */
+    #card-container input[type="text"] {
+      padding: 5px;
+      margin: 5px 0;
+      width: 80%;
+      max-width: 300px;
+    }
+    #card-container button {
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Compra tus Boletos de Cine</h1>
+    <p>Detalles de la compra:</p>
+    <p>Sala: <span id="room-detail"></span></p>
+    <p>Horario: <span id="time-detail"></span></p>
+    <p>Asientos seleccionados: <span id="seats-detail"></span></p>
+    <p>Total a pagar: <span id="total-detail"></span> MXN</p>
+
+    <!-- Selección de método de pago -->
+    <div class="payment-method-selection">
+      <p>Seleccione el método de pago:</p>
+      <label>
+        <input type="radio" name="paymentMethod" value="PayPal" checked>
+        PayPal
+      </label>
+      <label>
+        <input type="radio" name="paymentMethod" value="Tarjeta de Crédito">
+        Tarjeta de Crédito
+      </label>
+      <label>
+        <input type="radio" name="paymentMethod" value="Efectivo">
+        Efectivo
+      </label>
+    </div>
+
+    <!-- Contenedor para el botón de PayPal -->
+    <div id="paypal-container" class="paypal-button-container"></div>
+
+    <!-- Contenedor para el formulario de pago con tarjeta (oculto por defecto) -->
+    <div id="card-container" style="display:none;">
+      <h3>Pago con Tarjeta</h3>
+      <div class="card-details">
+        <label for="cardNumber">Número de Tarjeta:</label><br>
+        <input type="text" id="cardNumber" placeholder="#### #### #### ####"><br>
+        <label for="cardExpiry">Expiración (MM/AA):</label><br>
+        <input type="text" id="cardExpiry" placeholder="MM/AA"><br>
+        <label for="cardCVV">CVV:</label><br>
+        <input type="text" id="cardCVV" placeholder="123"><br>
+      </div>
+      <button id="pay-card-button">Pagar con Tarjeta</button>
+    </div>
+
+    <!-- Botón para pagar en efectivo -->
+    <div id="cash-container" style="display:none;">
+      <button id="pay-cash-button">Pagar en Efectivo</button>
+    </div>
+
+  </div>
+
+  <script>
+    // Recuperamos los datos de localStorage
+    const totalAmount = localStorage.getItem('totalAmount');
+    const selectedSeats = localStorage.getItem('selectedSeats');
+    const selectedRoom = localStorage.getItem('selectedRoom');
+    const selectedTime = localStorage.getItem('selectedTime');
+
+    // Mostrar detalles de la compra
+    document.getElementById('room-detail').textContent = selectedRoom;
+    document.getElementById('time-detail').textContent = selectedTime;
+    document.getElementById('seats-detail').textContent = selectedSeats;
+    document.getElementById('total-detail').textContent = totalAmount;
+
+    // Función para calcular el total
+    function calculateTotal() {
+      return totalAmount;
+    }
+
+    // Actualiza la visualización según el método de pago seleccionado
+    function updatePaymentMethod() {
+      const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+      if (method === 'PayPal') {
+        document.getElementById('paypal-container').style.display = 'block';
+        document.getElementById('card-container').style.display = 'none';
+        document.getElementById('cash-container').style.display = 'none';
+      } else if (method === 'Tarjeta de Crédito') {
+        document.getElementById('paypal-container').style.display = 'none';
+        document.getElementById('card-container').style.display = 'block';
+        document.getElementById('cash-container').style.display = 'none';
+      } else if (method === 'Efectivo') {
+        document.getElementById('paypal-container').style.display = 'none';
+        document.getElementById('card-container').style.display = 'none';
+        document.getElementById('cash-container').style.display = 'block';
+      }
+    }
+
+    // Agregar listener a los radios de método de pago
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+      radio.addEventListener('change', updatePaymentMethod);
+    });
+    updatePaymentMethod(); // Inicializa la vista según el valor por defecto
+
+    /* ============================= PAGO CON PAYPAL ============================= */
+    paypal.Buttons({
+      style: {
+        color: 'blue',
+        shape: 'pill',
+        label: 'pay',
+        height: 40
+      },
+      createOrder: function(data, actions) {
+        const total = calculateTotal();
+        return actions.order.create({
+          purchase_units: [{
+            amount: {
+              currency_code: 'MXN',
+              value: total
+            },
+            description: "Compra de boletos de cine"
+          }]
+        });
+      },
+      onApprove: function(data, actions) {
+        return actions.order.capture().then(function(details) {
+          const transactionId = details.purchase_units[0].payments.captures[0].id;
+          const montoPagado = details.purchase_units[0].amount.value;
+          const paypalEmail = details.payer.email_address;
+
+          // Enviar datos al back-end para registrar el pago
+          fetch('http://localhost:3000/api/register-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              transaction_id: transactionId,
+              monto_pagado: montoPagado,
+              paypal_email: paypalEmail,
+              metodo_pago: 'PayPal'
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            alert('¡Pago completado con PayPal!');
+          })
+          .catch(error => {
+            alert('Error al registrar el pago.');
+          });
+        });
+      }
+    }).render('#paypal-container');
+
+    /* ============================= PAGO CON TARJETA ============================= */
+    document.getElementById('pay-card-button').addEventListener('click', function() {
+      const total = calculateTotal();
+      const transactionId = 'CARD-' + new Date().getTime();
+
+      // Enviar datos al back-end para registrar el pago con tarjeta
+      fetch('http://localhost:3000/api/register-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_id: transactionId,
+          monto_pagado: total,
+          metodo_pago: 'Tarjeta de Crédito',
+          paypal_email: null
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert('¡Pago completado con tarjeta!');
+      })
+      .catch(error => {
+        alert('Error al registrar el pago.');
+      });
+    });
+
+    /* ============================= PAGO EN EFECTIVO ============================= */
+    document.getElementById('pay-cash-button').addEventListener('click', function() {
+      const total = calculateTotal();
+      const transactionId = 'CASH-' + new Date().getTime();
+
+      // Enviar datos al back-end para registrar el pago en efectivo
+      fetch('http://localhost:3000/api/register-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction_id: transactionId,
+          monto_pagado: total,
+          metodo_pago: 'Efectivo',
+          paypal_email: null
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert('¡Pago completado en efectivo!');
+      })
+      .catch(error => {
+        alert('Error al registrar el pago.');
+      });
+    });
+  </script>
+</body>
+</html>

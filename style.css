@@ -1,0 +1,75 @@
+/* Estilo global */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* Cabecera */
+header {
+    background-color: #1E2A38;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+}
+
+/* Contenedor de los asientos */
+.seat-container {
+    max-width: 900px;
+    margin: 30px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Tabla de asientos */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+table th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+button {
+    padding: 8px 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button.reserve {
+    background-color: #28a745;
+    color: white;
+}
+
+button.reserve:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+button.cancel {
+    background-color: #dc3545;
+    color: white;
+}
+
+footer {
+    background-color: #1E2A38;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}

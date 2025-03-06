@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Selecciona tu Asiento</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .asiento {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            text-align: center;
+            line-height: 40px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .disponible { background-color: green; color: white; }
+        .ocupado { background-color: red; color: white; cursor: not-allowed; }
+        .seleccionado { background-color: blue; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <h2 class="text-center">Selecciona tu Asiento</h2>
+        <div id="asientos-container" class="d-flex flex-wrap justify-content-center"></div>
+        <div class="text-center mt-3">
+            <button class="btn btn-primary" id="comprar-btn">Comprar boletos</button>
+        </div>
+    </div>
+
+    <script>
+        const filas = 12;
+        const columnas = 12;
+        const asientosContainer = document.getElementById("asientos-container");
+        let asientosOcupados = JSON.parse(localStorage.getItem("asientosOcupados")) || [];
+
+        for (let fila = 1; fila <= filas; fila++) {
+            for (let columna = 1; columna <= columnas; columna++) {
+                const asiento = document.createElement("div");
+                asiento.classList.add("asiento");
+                const id = `${fila}-${columna}`;
+                asiento.dataset.id = id;
+                asiento.textContent = id;
+                
+                if (asientosOcupados.includes(id)) {
+                    asiento.classList.add("ocupado");
+                } else {
+                    asiento.classList.add("disponible");
+                    asiento.addEventListener("click", () => {
+                        asiento.classList.toggle("seleccionado");
+                    });
+                }
+                asientosContainer.appendChild(asiento);
+            }
+        }
+        
+        document.getElementById("comprar-btn").addEventListener("click", () => {
+            const seleccionados = document.querySelectorAll(".seleccionado");
+            if (seleccionados.length === 0) {
+                alert("Selecciona al menos un asiento");
+                return;
+            }
+            seleccionados.forEach(asiento => {
+                asientosOcupados.push(asiento.dataset.id);
+            });
+            localStorage.setItem("asientosOcupados", JSON.stringify(asientosOcupados));
+            window.location.href = "pago.html";
+        });
+    </script>
+</body>
+</html>
