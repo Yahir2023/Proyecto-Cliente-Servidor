@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selecciona tu Asiento</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
@@ -17,55 +18,125 @@
         .disponible { background-color: green; color: white; }
         .ocupado { background-color: red; color: white; cursor: not-allowed; }
         .seleccionado { background-color: blue; color: white; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="container my-4">
-        <h2 class="text-center">Selecciona tu Asiento</h2>
-        <div id="asientos-container" class="d-flex flex-wrap justify-content-center"></div>
-        <div class="text-center mt-3">
-            <button class="btn btn-primary" id="comprar-btn">Comprar boletos</button>
+    <nav class="navbar navbar-expand-lg" style="background-color: #5A2BBF;">
+        <div class="container-fluid">
+            <a class="navbar-brand text-white fw-bold" href="#">CINE</a>
+        </div>
+    </nav>
+    
+    <div class="container my-4" id="room-step">
+        <h3>Selecciona una Sala</h3>
+        <select class="form-select" id="room-select" onchange="selectRoom()">
+            <option value="" selected disabled>Elige una sala</option>
+            <option value="Sala 1 - 2D">Sala 1 - 2D</option>
+            <option value="Sala 2 - 3D">Sala 2 - 3D</option>
+            <option value="Sala 3 - 4DX">Sala 3 - 4DX</option>
+            <option value="Sala 4 - IMAX">Sala 4 - IMAX</option>
+            <option value="Sala 5 - VIP">Sala 5 - VIP</option>
+        </select>
+    </div>
+    
+    <div class="container my-4 hidden" id="time-step">
+        <h3>Selecciona un Horario</h3>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="selectTime('12:00 PM')">12:00 PM</button>
+            <button class="btn btn-outline-primary" onclick="selectTime('3:00 PM')">3:00 PM</button>
+            <button class="btn btn-outline-primary" onclick="selectTime('6:00 PM')">6:00 PM</button>
+            <button class="btn btn-outline-primary" onclick="selectTime('9:00 PM')">9:00 PM</button>
         </div>
     </div>
-
+    
+    <div class="container my-4 hidden" id="seat-step">
+        <h3 id="room-title"></h3>
+        <div id="asientos-container" class="d-flex flex-wrap justify-content-center"></div>
+        <div class="mt-3">
+            <label for="adult-count">Adultos ($10 c/u):</label>
+            <input type="number" id="adult-count" class="form-control" min="0" value="0" onchange="updateTotal()">
+            <label for="child-count" class="mt-2">Niños ($7 c/u):</label>
+            <input type="number" id="child-count" class="form-control" min="0" value="0" onchange="updateTotal()">
+        </div>
+        <h4 class="mt-3">Total: $<span id="total-price">0</span></h4>
+        <button class="btn btn-success mt-3" onclick="confirmSelection()">Confirmar Selección</button>
+    </div>
+    
     <script>
-        const filas = 12;
-        const columnas = 12;
-        const asientosContainer = document.getElementById("asientos-container");
+        let selectedRoom = '';
+        let selectedTime = '';
+        const selectedSeats = new Set();
+        let totalPeople = 0;
         let asientosOcupados = JSON.parse(localStorage.getItem("asientosOcupados")) || [];
-
-        for (let fila = 1; fila <= filas; fila++) {
-            for (let columna = 1; columna <= columnas; columna++) {
-                const asiento = document.createElement("div");
-                asiento.classList.add("asiento");
-                const id = `${fila}-${columna}`;
-                asiento.dataset.id = id;
-                asiento.textContent = id;
-                
-                if (asientosOcupados.includes(id)) {
-                    asiento.classList.add("ocupado");
-                } else {
-                    asiento.classList.add("disponible");
-                    asiento.addEventListener("click", () => {
-                        asiento.classList.toggle("seleccionado");
-                    });
-                }
-                asientosContainer.appendChild(asiento);
+        
+        function selectRoom() {
+            selectedRoom = document.getElementById('room-select').value;
+            if (selectedRoom) {
+                document.getElementById('room-step').classList.add('hidden');
+                document.getElementById('time-step').classList.remove('hidden');
             }
         }
-        
-        document.getElementById("comprar-btn").addEventListener("click", () => {
-            const seleccionados = document.querySelectorAll(".seleccionado");
-            if (seleccionados.length === 0) {
+
+        function selectTime(time) {
+            selectedTime = time;
+            document.getElementById('room-title').textContent = `${selectedRoom} - ${time}`;
+            document.getElementById('time-step').classList.add('hidden');
+            document.getElementById('seat-step').classList.remove('hidden');
+            generateSeats();
+        }
+
+        function generateSeats() {
+            const asientosContainer = document.getElementById("asientos-container");
+            asientosContainer.innerHTML = '';
+            
+            for (let fila = 1; fila <= 12; fila++) {
+                for (let columna = 1; columna <= 12; columna++) {
+                    const asiento = document.createElement("div");
+                    asiento.classList.add("asiento");
+                    const id = `${fila}-${columna}`;
+                    asiento.dataset.id = id;
+                    asiento.textContent = id;
+                    
+                    if (asientosOcupados.includes(id)) {
+                        asiento.classList.add("ocupado");
+                    } else {
+                        asiento.classList.add("disponible");
+                        asiento.addEventListener("click", () => toggleSeat(asiento, id));
+                    }
+                    asientosContainer.appendChild(asiento);
+                }
+            }
+        }
+
+        function toggleSeat(asiento, id) {
+            if (selectedSeats.has(id)) {
+                selectedSeats.delete(id);
+                asiento.classList.remove("seleccionado");
+            } else if (selectedSeats.size < totalPeople) {
+                selectedSeats.add(id);
+                asiento.classList.add("seleccionado");
+            }
+        }
+
+        function updateTotal() {
+            const adultCount = parseInt(document.getElementById('adult-count').value) || 0;
+            const childCount = parseInt(document.getElementById('child-count').value) || 0;
+            totalPeople = adultCount + childCount;
+            const totalPrice = (adultCount * 10) + (childCount * 7);
+            document.getElementById('total-price').textContent = totalPrice;
+        }
+
+        function confirmSelection() {
+            if (selectedSeats.size === 0) {
                 alert("Selecciona al menos un asiento");
                 return;
             }
-            seleccionados.forEach(asiento => {
-                asientosOcupados.push(asiento.dataset.id);
-            });
+            selectedSeats.forEach(seat => asientosOcupados.push(seat));
             localStorage.setItem("asientosOcupados", JSON.stringify(asientosOcupados));
+            alert(`Has seleccionado los asientos: ${Array.from(selectedSeats).join(', ')} para la función de ${selectedTime} en ${selectedRoom}. Total a pagar: $${document.getElementById('total-price').textContent}`);
             window.location.href = "pago.html";
-        });
+        }
     </script>
 </body>
 </html>
