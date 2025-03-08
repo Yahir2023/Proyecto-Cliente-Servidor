@@ -16,6 +16,7 @@ app.use(require('./routes/Usuarios'));
 app.use(require('./routes/Pagos'));
 app.use(require('./routes/Peliculas'));
 app.use(require('./routes/Promociones'));
+app.use(require('./routes/admin'));
 
 // Rutas API adicionales
 const authRoutes = require("./routes/Login");
