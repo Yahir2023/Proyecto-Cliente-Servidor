@@ -14,14 +14,14 @@ exports.getAllAsientos = (req, res) => {
 
 // Agregar un nuevo asiento
 exports.addAsiento = (req, res) => {
-    const { id_sala, numero_asiento, fila} = req.body;
+    const { id_sala, numero_asiento, fila, tipo_asiento} = req.body;
 
     // Consulta para insertar un nuevo asiento
     const query = `
-        INSERT INTO asientos (id_sala, numero_asiento, fila, created_at, updated_at)
-        VALUES (?, ?, ?, NOW(), NOW())`;
+        INSERT INTO asientos (id_sala, numero_asiento, fila, tipo_asiento, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NOW(), NOW())`;
 
-    db.query(query, [id_sala, numero_asiento, fila], (err, result) => {
+    db.query(query, [id_sala, numero_asiento, fila, tipo_asiento], (err, result) => {
         if (err) {
             console.error('Error al agregar el asiento:', err);
             return res.status(500).send('Error al agregar el asiento');
