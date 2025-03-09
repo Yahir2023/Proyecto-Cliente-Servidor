@@ -12,18 +12,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Rutas existentes
-app.use(require('./routes/Usuarios'));
+//app.use(require('./routes/Usuarios'));
 app.use(require('./routes/Pagos'));
-app.use(require('./routes/Peliculas'));
-app.use(require('./routes/Promociones'));
+//app.use(require('./routes/Peliculas'));
+//app.use(require('./routes/Promociones'));
 app.use(require('./routes/asientos'));
 
 // Rutas API adicionales
 const authRoutes = require("./routes/Login");
 app.use("/api", authRoutes);
 
-const reservasRoutes = require("./routes/Reservas");
-app.use("/api", reservasRoutes);
+//const reservasRoutes = require("./routes/Reservas");
+///app.use("/api", reservasRoutes);
 
 // Ruta de asientos
 const asientosRoutes = require("./routes/asientos");
