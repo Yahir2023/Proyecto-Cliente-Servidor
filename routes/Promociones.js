@@ -1,11 +1,41 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+dotenv.config();
 
-
+const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 const { connection } = require("../config/config.db");
 
+// Middleware para validar el token JWT
+const authMiddleware = (req, res, next) => {
+  let token = req.header("Authorization");
+  if (!token) {
+    return res.status(401).json({ mensaje: "Acceso denegado. No hay token." });
+  }
+  // Eliminar el prefijo "Bearer " si está presente
+  if (token.startsWith("Bearer ")) {
+    token = token.slice(7).trim();
+  }
+  try {
+    const decoded = jwt.verify(token, secretKey);
+    req.usuario = decoded; // Se espera que el token incluya { id, isAdmin, ... }
+    next();
+  } catch (error) {
+    return res.status(401).json({ mensaje: "Token no válido" });
+  }
+};
 
-router.get("/promociones", (req, res) => {
+// Middleware para validar que el usuario sea administrador
+const adminMiddleware = (req, res, next) => {
+  if (!req.usuario.isAdmin) {
+    return res.status(403).json({ mensaje: "Acceso denegado. Solo administradores pueden realizar esta acción." });
+  }
+  next();
+};
+
+//Permite filtrar promociones por descripción (cualquier usuario autenticado)
+router.get("/promociones", authMiddleware, (req, res) => {
   const { search } = req.query;
   
   let query = "SELECT * FROM promociones WHERE 1=1";
@@ -25,14 +55,9 @@ router.get("/promociones", (req, res) => {
   });
 });
 
-router.post("/promociones", (req, res) => {
-  const {
-    descripcion,
-    tipo_descuento,
-    valor_descuento,
-    fecha_inicio,
-    fecha_fin
-  } = req.body;
+//Solo administradores pueden crear una nueva promoción
+router.post("/promociones", authMiddleware, adminMiddleware, (req, res) => {
+  const { descripcion, tipo_descuento, valor_descuento, fecha_inicio, fecha_fin } = req.body;
 
   const query = `
     INSERT INTO promociones 
@@ -56,15 +81,10 @@ router.post("/promociones", (req, res) => {
   );
 });
 
-router.put("/promociones/:id", (req, res) => {
+//Solo administradores pueden actualizar una promoción
+router.put("/promociones/:id", authMiddleware, adminMiddleware, (req, res) => {
   const { id } = req.params;
-  const {
-    descripcion,
-    tipo_descuento,
-    valor_descuento,
-    fecha_inicio,
-    fecha_fin
-  } = req.body;
+  const { descripcion, tipo_descuento, valor_descuento, fecha_inicio, fecha_fin } = req.body;
 
   const query = `
     UPDATE promociones
@@ -94,7 +114,8 @@ router.put("/promociones/:id", (req, res) => {
   );
 });
 
-router.delete("/promociones/:id", (req, res) => {
+//Solo administradores pueden eliminar una promoción
+router.delete("/promociones/:id", authMiddleware, adminMiddleware, (req, res) => {
   const { id } = req.params;
 
   const query = "DELETE FROM promociones WHERE id_promocion = ?";

@@ -82,8 +82,6 @@ app.get("/admin", authMiddleware, (req, res) => {
   });
 });
 
-// Registrar un nuevo administrador (contraseña encriptada)
-// Se requiere autenticación, y en un escenario real podrías querer restringir
 // que solo ciertos roles (por ejemplo, Gerente) puedan registrar nuevos administradores.
 app.post("/admin", authMiddleware, async (req, res) => {
   const { nombre, apellido, correo, contraseña, rol } = req.body;
@@ -114,7 +112,6 @@ app.post("/admin", authMiddleware, async (req, res) => {
 });
 
 // Editar administrador (solo el propio administrador puede editar sus datos)
-// En escenarios reales podrías permitir a ciertos roles editar a otros administradores.
 app.put("/admin/:id_admin", authMiddleware, async (req, res) => {
   const { id_admin } = req.params;
   const { nombre, apellido, correo, contraseña, rol } = req.body;
@@ -154,7 +151,6 @@ app.put("/admin/:id_admin", authMiddleware, async (req, res) => {
 });
 
 // Eliminar administrador (solo el propio administrador puede eliminar su cuenta)
-// Nuevamente, podrías permitir a ciertos roles (como Gerente) eliminar a otros administradores.
 app.delete("/admin/:id_admin", authMiddleware, (req, res) => {
   const { id_admin } = req.params;
 
