@@ -18,6 +18,7 @@ app.use(require('./routes/Reservas'));
 app.use(require('./routes/boletos'));
 app.use(require('./routes/compras'));
 app.use(require('./routes/Asientos'));
+app.use(require('./routes/Funciones'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
