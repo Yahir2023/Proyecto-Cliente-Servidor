@@ -139,9 +139,6 @@ const deletePelicula = (req, res) => {
   });
 };
 
-// Rutas de la API de películas
-// La ruta GET es accesible para cualquier usuario autenticado (administrador o usuario normal)
-// Las rutas POST, PUT y DELETE requieren que el usuario sea administrador
 app.route("/peliculas")
    .get(authMiddleware, getPeliculas)
    .post(authMiddleware, adminMiddleware, postPelicula);

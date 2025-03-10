@@ -215,13 +215,11 @@ const notificacionPago = (req, res) => {
   );
 };
 
-// Rutas
-
-// Endpoints protegidos por autenticación y, para algunos, solo accesibles para administradores.
+//solo accesibles para administradores.
 router.get("/pagos", authMiddleware, adminMiddleware, getPagos);
 router.get("/pagos/:id_pago", authMiddleware, adminMiddleware, getPagoById);
 
-// Crear pago: disponible para cualquier usuario autenticado.
+//cualquier usuario autenticado.
 router.post("/pagos", authMiddleware, postPago);
 
 // Confirmar, cancelar y reembolsar pagos: acciones reservadas a administradores.
