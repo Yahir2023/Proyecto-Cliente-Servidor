@@ -30,46 +30,6 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// Iniciar sesión para administradores
-app.post("/auth/login", (req, res) => {
-  const { correo, contraseña } = req.body;
-
-  connection.query(
-    "SELECT * FROM administradores WHERE correo = ?",
-    [correo],
-    async (error, results) => {
-      if (error)
-        return res.status(500).json({ mensaje: "Error en el servidor" });
-
-      if (results.length === 0)
-        return res
-          .status(400)
-          .json({ mensaje: "Credenciales incorrectas" });
-
-      const admin = results[0];
-      const validPassword = await bcrypt.compare(contraseña, admin.contraseña);
-      if (!validPassword)
-        return res
-          .status(400)
-          .json({ mensaje: "Credenciales incorrectas" });
-
-      // Creamos el token con la información del administrador
-      const token = jwt.sign(
-        {
-          id: admin.id_admin,
-          correo: admin.correo,
-          rol: admin.rol,
-          isAdmin: true,
-        },
-        secretKey,
-        { expiresIn: "1h" }
-      );
-
-      res.json({ mensaje: "Inicio de sesión exitoso", token });
-    }
-  );
-});
-
 // Obtener todos los administradores (acceso solo para administradores autenticados)
 app.get("/admin", authMiddleware, (req, res) => {
   // En este ejemplo se asume que quien haga la petición es administrador (por el token)

@@ -25,10 +25,23 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-/**
- * GET /asientos/sala/:id_sala
- * Obtiene todos los asientos de una sala específica.
- */
+// Obtener todos los asientos (Solo Admin)
+router.get('/asientos', authMiddleware, (req, res) => {
+    if (!req.usuario.isAdmin) {
+        return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden acceder a este endpoint.' });
+    }
+    const query = 'SELECT * FROM asientos';
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error al obtener los asientos' });
+        }
+        res.status(200).json(results);
+    });
+});
+
+
+ //Obtiene todos los asientos de una sala específica.
 router.get('/asientos/sala/:id_sala', authMiddleware, (req, res) => {
     const { id_sala } = req.params;
     const query = 'SELECT * FROM asientos WHERE id_sala = ?';
@@ -41,10 +54,8 @@ router.get('/asientos/sala/:id_sala', authMiddleware, (req, res) => {
     });
 });
 
-/**
- * GET /asientos/:id_asiento
- * Obtiene los detalles de un asiento específico.
- */
+
+ //Obtiene los detalles de un asiento específico.
 router.get('/asientos/:id_asiento', authMiddleware, (req, res) => {
     const { id_asiento } = req.params;
     const query = 'SELECT * FROM asientos WHERE id_asiento = ?';
@@ -60,10 +71,8 @@ router.get('/asientos/:id_asiento', authMiddleware, (req, res) => {
     });
 });
 
-/**
- * POST /asientos
- * Crea un nuevo asiento (Solo Admin).
- */
+
+ //Crea un nuevo asiento (Solo Admin).
 router.post('/asientos', authMiddleware, (req, res) => {
     if (!req.usuario.isAdmin) {
         return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden crear asientos.' });
@@ -82,10 +91,7 @@ router.post('/asientos', authMiddleware, (req, res) => {
     });
 });
 
-/**
- * PUT /asientos/:id_asiento
- * Actualiza los detalles de un asiento (Solo Admin).
- */
+ //Actualiza los detalles de un asiento (Solo Admin).
 router.put('/asientos/:id_asiento', authMiddleware, (req, res) => {
     if (!req.usuario.isAdmin) {
         return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden actualizar asientos.' });
@@ -105,10 +111,7 @@ router.put('/asientos/:id_asiento', authMiddleware, (req, res) => {
     });
 });
 
-/**
- * DELETE /asientos/:id_asiento
- * Elimina un asiento (Solo Admin).
- */
+//Elimina un asiento (Solo Admin).
 router.delete('/asientos/:id_asiento', authMiddleware, (req, res) => {
     if (!req.usuario.isAdmin) {
         return res.status(403).json({ error: 'Acceso denegado. Solo administradores pueden eliminar asientos.' });
@@ -127,11 +130,7 @@ router.delete('/asientos/:id_asiento', authMiddleware, (req, res) => {
     });
 });
 
-/**
- * GET /asientos/:id_asiento/disponibilidad/:id_funcion
- * Verifica la disponibilidad de un asiento para una función específica.
- * Se asume que existe una tabla "disponibilidad_asientos" con los estados correspondientes.
- */
+ //Verifica la disponibilidad de un asiento para una función específica.
 router.get('/asientos/:id_asiento/disponibilidad/:id_funcion', authMiddleware, (req, res) => {
     const { id_asiento, id_funcion } = req.params;
     const query = 'SELECT * FROM disponibilidad_asientos WHERE id_asiento = ? AND id_funcion = ?';
@@ -147,11 +146,7 @@ router.get('/asientos/:id_asiento/disponibilidad/:id_funcion', authMiddleware, (
     });
 });
 
-/**
- * POST /asientos/reservar
- * Reserva un asiento para un usuario en una función.
- * Se asume que se actualiza el estado en la tabla "disponibilidad_asientos".
- */
+ //Reserva un asiento para un usuario en una función.
 router.post('/asientos/reservar', authMiddleware, (req, res) => {
     const { id_asiento, id_funcion, id_usuario } = req.body;
     if (!id_asiento || !id_funcion || !id_usuario) {

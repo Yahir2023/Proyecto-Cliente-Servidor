@@ -27,51 +27,6 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-app.post("/auth/login", (req, res) => {
-    const { correo, contraseña } = req.body;
-    
-    // Primero se busca en la tabla de administradores
-    connection.query("SELECT * FROM administradores WHERE correo = ?", [correo], async (error, results) => {
-      if (error) return res.status(500).json({ mensaje: "Error en el servidor" });
-      
-      if (results.length > 0) {
-        const admin = results[0];
-        const validPassword = await bcrypt.compare(contraseña, admin.contraseña);
-        if (!validPassword) {
-          return res.status(400).json({ mensaje: "Credenciales incorrectas" });
-        }
-        
-        // Se crea el token incluyendo isAdmin: true, sin importar el valor de rol en la base de datos.
-        const token = jwt.sign(
-          { id: admin.id_admin, correo: admin.correo, isAdmin: true, rol: admin.rol },
-          secretKey,
-          { expiresIn: "1h" }
-        );
-        return res.json({ mensaje: "Inicio de sesión exitoso", token });
-      }
-      
-      // Si no se encuentra en administradores, se busca en usuarios
-      connection.query("SELECT * FROM usuarios WHERE correo = ?", [correo], async (error, results) => {
-        if (error) return res.status(500).json({ mensaje: "Error en el servidor" });
-        if (results.length === 0) {
-          return res.status(400).json({ mensaje: "Credenciales incorrectas" });
-        }
-        const usuario = results[0];
-        const validPassword = await bcrypt.compare(contraseña, usuario.contraseña);
-        if (!validPassword) {
-          return res.status(400).json({ mensaje: "Credenciales incorrectas" });
-        }
-        // Token para usuario normal
-        const token = jwt.sign(
-          { id: usuario.id_usuario, correo: usuario.correo, isAdmin: false },
-          secretKey,
-          { expiresIn: "1h" }
-        );
-        return res.json({ mensaje: "Inicio de sesión exitoso", token });
-      });
-    });
-  });  
-
    app.get("/usuarios", authMiddleware, (req, res) => {
     if (!req.usuario.isAdmin) {
       return res.status(403).json({ mensaje: "Acceso denegado. Se requiere rol de administrador" });
@@ -148,6 +103,43 @@ app.delete("/usuarios/:id_usuario", authMiddleware, (req, res) => {
         }
         res.json({ mensaje: "Usuario eliminado correctamente" });
     });
+});
+
+app.put("/usuarios/:id_usuario/password", authMiddleware, async (req, res) => {
+  try {
+      const { id_usuario } = req.params;
+      const { contraseña } = req.body;
+
+      // Verificar que el usuario autenticado es el mismo que quiere cambiar su contraseña
+      if (req.usuario.id != id_usuario) {
+          return res.status(403).json({ mensaje: "Acceso denegado" });
+      }
+
+      if (!contraseña) {
+          return res.status(400).json({ mensaje: "La nueva contraseña es requerida." });
+      }
+
+      // Encriptar la nueva contraseña
+      const salt = await bcrypt.genSalt(10);
+      const contraseñaEncriptada = await bcrypt.hash(contraseña, salt);
+
+      // Actualizar la contraseña en la base de datos
+      connection.query(
+          "UPDATE usuarios SET contraseña = ? WHERE id_usuario = ?",
+          [contraseñaEncriptada, id_usuario],
+          (error, results) => {
+              if (error) {
+                  return res.status(500).json({ mensaje: "Error al actualizar la contraseña." });
+              }
+              if (results.affectedRows === 0) {
+                  return res.status(404).json({ mensaje: "Usuario no encontrado." });
+              }
+              res.status(200).json({ mensaje: "Contraseña actualizada con éxito." });
+          }
+      );
+  } catch (error) {
+      res.status(500).json({ mensaje: "Error en el servidor." });
+  }
 });
 
 module.exports = app;
