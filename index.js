@@ -12,9 +12,12 @@ app.use(require('./routes/Usuarios'));
 app.use(require('./routes/Pagos'));
 app.use(require('./routes/Peliculas'));
 app.use(require('./routes/Promociones'));
-app.use(require('./routes/admin'));
+app.use(require('./routes/Admin'));
 app.use(require('./routes/Login'));
 app.use(require('./routes/Reservas'));
+app.use(require('./routes/boletos'));
+app.use(require('./routes/compras'));
+app.use(require('./routes/Asientos'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
