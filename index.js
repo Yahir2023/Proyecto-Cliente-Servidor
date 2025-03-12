@@ -1,9 +1,14 @@
 const express = require("express");
 const path = require("path");
 const app = express();
+const swaggerUi = require("swagger-ui-express");
+const swaggerFile = require("./swagger_output.json");
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
