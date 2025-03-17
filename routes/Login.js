@@ -8,7 +8,6 @@ dotenv.config();
 const router = express.Router();
 const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
-// Middleware para verificar JWT en rutas protegidas
 const authMiddleware = (req, res, next) => {
     let token = req.header("Authorization");
     if (!token) return res.status(401).json({ mensaje: "Acceso denegado. No hay token." });
