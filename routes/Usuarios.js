@@ -1,5 +1,4 @@
 const express = require("express");
-const cors = require("cors");
 const dotenv = require("dotenv");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -8,7 +7,6 @@ dotenv.config();
 const { connection } = require("../config/config.db");
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 const secretKey = process.env.SECRET_KEY || "secreto_super_seguro"; // Clave secreta para JWT
