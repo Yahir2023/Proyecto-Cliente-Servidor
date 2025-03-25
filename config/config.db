@@ -1,5 +1,6 @@
 const dotenv = require("dotenv");
 dotenv.config();
+<<<<<<< HEAD
 const mysql = require( 'mysql');
 let connection;
 
@@ -14,3 +15,18 @@ try {
     console. log("Error al conectar con la base de datos");
 }
 module.exports = {connection};
+=======
+const mysql = require("mysql");
+const { promisify } = require("util");
+
+const connection = mysql.createPool({
+  host: process.env.DBHOST,
+  user: process.env.DBUSER,
+  password: process.env.DBPASS,
+  database: process.env.DBNAME,
+});
+
+connection.query = promisify(connection.query); // Convierte connection.query a promesas
+
+module.exports = { connection };
+>>>>>>> master

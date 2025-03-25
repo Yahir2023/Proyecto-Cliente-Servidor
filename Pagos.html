@@ -71,12 +71,33 @@
 <body>
   <div class="container">
     <h1>Compra tus Boletos de Cine</h1>
+<<<<<<< HEAD
     <p>Detalles de la compra:</p>
     <p>Sala: <span id="room-detail"></span></p>
     <p>Horario: <span id="time-detail"></span></p>
     <p>Asientos seleccionados: <span id="seats-detail"></span></p>
     <p>Total a pagar: <span id="total-detail"></span> MXN</p>
 
+=======
+    
+    <!-- Selección de boleto -->
+    <div class="ticket-selection">
+      <p>Seleccione el tipo de boleto:</p>
+      <label>
+        <input type="radio" name="ticket" value="adult" checked>
+        Adulto (80 pesos)
+      </label>
+      <label>
+        <input type="radio" name="ticket" value="child">
+        Niño (50 pesos)
+      </label>
+      <div class="quantity">
+        <label for="quantity">Cantidad:</label>
+        <input type="number" id="quantity" value="1" min="1">
+      </div>
+    </div>
+    
+>>>>>>> master
     <!-- Selección de método de pago -->
     <div class="payment-method-selection">
       <p>Seleccione el método de pago:</p>
@@ -89,6 +110,7 @@
         Tarjeta de Crédito
       </label>
       <label>
+<<<<<<< HEAD
         <input type="radio" name="paymentMethod" value="Efectivo">
         Efectivo
       </label>
@@ -97,6 +119,16 @@
     <!-- Contenedor para el botón de PayPal -->
     <div id="paypal-container" class="paypal-button-container"></div>
 
+=======
+        <input type="radio" name="paymentMethod" value="Tarjeta de Débito">
+        Tarjeta de Débito
+      </label>
+    </div>
+    
+    <!-- Contenedor para el botón de PayPal -->
+    <div id="paypal-container" class="paypal-button-container"></div>
+    
+>>>>>>> master
     <!-- Contenedor para el formulario de pago con tarjeta (oculto por defecto) -->
     <div id="card-container" style="display:none;">
       <h3>Pago con Tarjeta</h3>
@@ -110,6 +142,7 @@
       </div>
       <button id="pay-card-button">Pagar con Tarjeta</button>
     </div>
+<<<<<<< HEAD
 
     <!-- Botón para pagar en efectivo -->
     <div id="cash-container" style="display:none;">
@@ -154,13 +187,44 @@
       }
     }
 
+=======
+  </div>
+
+  <script>
+    // Función para calcular el total a pagar según boleto y cantidad
+    function calculateTotal() {
+      const ticketType = document.querySelector('input[name="ticket"]:checked').value;
+      const pricePerTicket = ticketType === 'adult' ? 80 : 50;
+      const quantity = parseInt(document.getElementById('quantity').value) || 1;
+      return (pricePerTicket * quantity).toFixed(2);
+    }
+    
+    // Actualiza la visualización según el método de pago seleccionado
+    function updatePaymentMethod() {
+      const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+      if(method === 'PayPal') {
+        document.getElementById('paypal-container').style.display = 'block';
+        document.getElementById('card-container').style.display = 'none';
+      } else {
+        document.getElementById('paypal-container').style.display = 'none';
+        document.getElementById('card-container').style.display = 'block';
+      }
+    }
+    
+>>>>>>> master
     // Agregar listener a los radios de método de pago
     document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
       radio.addEventListener('change', updatePaymentMethod);
     });
     updatePaymentMethod(); // Inicializa la vista según el valor por defecto
 
+<<<<<<< HEAD
     /* ============================= PAGO CON PAYPAL ============================= */
+=======
+    /* =============================
+       PAGO CON PAYPAL
+       ============================= */
+>>>>>>> master
     paypal.Buttons({
       style: {
         color: 'blue',
@@ -185,12 +249,22 @@
           const transactionId = details.purchase_units[0].payments.captures[0].id;
           const montoPagado = details.purchase_units[0].amount.value;
           const paypalEmail = details.payer.email_address;
+<<<<<<< HEAD
 
           // Enviar datos al back-end para registrar el pago
+=======
+          const id_compra = 0; // Puedes asignar o generar un id_compra según tu lógica
+
+          // Enviar datos al back-end para registrar el pago (método PayPal)
+>>>>>>> master
           fetch('http://localhost:3000/api/register-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+<<<<<<< HEAD
+=======
+              id_compra: id_compra,
+>>>>>>> master
               transaction_id: transactionId,
               monto_pagado: montoPagado,
               paypal_email: paypalEmail,
@@ -199,6 +273,7 @@
           })
           .then(response => response.json())
           .then(data => {
+<<<<<<< HEAD
             alert('¡Pago completado con PayPal!');
           })
           .catch(error => {
@@ -213,19 +288,58 @@
       const total = calculateTotal();
       const transactionId = 'CARD-' + new Date().getTime();
 
+=======
+            console.log('Pago registrado:', data);
+            alert('¡Transacción completada y registrada con PayPal!');
+          })
+          .catch(error => {
+            console.error('Error registrando el pago:', error);
+            alert('Pago completado, pero ocurrió un error al registrar el pago.');
+          });
+        });
+      },
+      onError: function(err) {
+        console.error('Error en el proceso de pago:', err);
+        alert('Ocurrió un error durante el proceso de pago con PayPal.');
+      }
+    }).render('#paypal-container');
+
+    /* =============================
+       PAGO CON TARJETA (Crédito o Débito)
+       ============================= */
+    document.getElementById('pay-card-button').addEventListener('click', function() {
+      const total = calculateTotal();
+      const id_compra = 0; // Puedes asignar o generar un id_compra según tu lógica
+      // Generar un ID de transacción simulado
+      const transactionId = 'CARD-' + new Date().getTime();
+      // (Opcional) Aquí se podrían validar los datos de la tarjeta ingresados
+
+      // Se determina el método de pago seleccionado: "Tarjeta de Crédito" o "Tarjeta de Débito"
+      const metodoPago = document.querySelector('input[name="paymentMethod"]:checked').value;
+      
+>>>>>>> master
       // Enviar datos al back-end para registrar el pago con tarjeta
       fetch('http://localhost:3000/api/register-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+<<<<<<< HEAD
           transaction_id: transactionId,
           monto_pagado: total,
           metodo_pago: 'Tarjeta de Crédito',
           paypal_email: null
+=======
+          id_compra: id_compra,
+          transaction_id: transactionId,
+          monto_pagado: total,
+          metodo_pago: metodoPago,  // 'Tarjeta de Crédito' o 'Tarjeta de Débito'
+          paypal_email: null       // No se usa para pagos con tarjeta
+>>>>>>> master
         })
       })
       .then(response => response.json())
       .then(data => {
+<<<<<<< HEAD
         alert('¡Pago completado con tarjeta!');
       })
       .catch(error => {
@@ -255,6 +369,14 @@
       })
       .catch(error => {
         alert('Error al registrar el pago.');
+=======
+        console.log('Pago con tarjeta registrado:', data);
+        alert('¡Transacción completada y registrada con ' + metodoPago + '!');
+      })
+      .catch(error => {
+        console.error('Error registrando el pago con tarjeta:', error);
+        alert('Ocurrió un error al registrar el pago con tarjeta.');
+>>>>>>> master
       });
     });
   </script>
