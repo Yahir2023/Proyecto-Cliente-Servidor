@@ -76,7 +76,24 @@ router.post("/auth/login", (req, res) => {
 
 // Ruta protegida para obtener perfil
 router.get("/auth/perfil", authMiddleware, (req, res) => {
-    res.json({ mensaje: "Acceso a perfil permitido.", usuario: req.usuario });
+    const userId = req.usuario.id;
+    const isAdmin = req.usuario.isAdmin;
+
+    // Consultar en la tabla correcta dependiendo de si es admin o usuario normal
+    const query = isAdmin 
+        ? "SELECT nombre FROM administradores WHERE id_admin = ?" 
+        : "SELECT nombre FROM usuarios WHERE id_usuario = ?";
+
+    connection.query(query, [userId], (err, results) => {
+        if (err) return res.status(500).json({ mensaje: "Error en la base de datos." });
+
+        if (results.length > 0) {
+            const nombre = results[0].nombre;
+            res.json({ mensaje: "Acceso a perfil permitido.", usuario: { ...req.usuario, nombre } });
+        } else {
+            res.status(404).json({ mensaje: "Usuario no encontrado." });
+        }
+    });
 });
 
 module.exports = router;

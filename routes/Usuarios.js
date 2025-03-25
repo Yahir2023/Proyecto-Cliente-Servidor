@@ -13,17 +13,41 @@ const secretKey = process.env.SECRET_KEY || "secreto_super_seguro"; // Clave sec
 
 // Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
-    const token = req.header("Authorization");
-    if (!token) return res.status(401).json({ mensaje: "Acceso denegado. No hay token." });
-
-    try {
-        const decoded = jwt.verify(token, secretKey);
-        req.usuario = decoded; // Guardar datos del usuario en la request
-        next();
-    } catch (error) {
-        res.status(401).json({ mensaje: "Token no válido" });
+    const authHeader = req.header("Authorization");
+    if (!authHeader) {
+      return res.status(401).json({ mensaje: "Acceso denegado. No hay token." });
     }
-};
+  
+    const tokenPart = authHeader.split(" ")[1];
+    if (!tokenPart) {
+      return res.status(401).json({ mensaje: "Token malformado." });
+    }
+  
+    try {
+      const decoded = jwt.verify(tokenPart, secretKey);
+      req.usuario = decoded;
+      next();
+    } catch (error) {
+      return res.status(401).json({ mensaje: "Token no válido" });
+    }
+  };
+  
+
+// Obtener datos de un usuario en específico (para el propio usuario o administrador)
+app.get("/usuarios/:id_usuario", authMiddleware, (req, res) => {
+  const { id_usuario } = req.params;
+
+  // Permitir acceso si es administrador o si el usuario es el mismo
+  if (!req.usuario.isAdmin && req.usuario.id !== parseInt(id_usuario)) {
+    return res.status(403).json({ mensaje: "Acceso denegado." });
+  }
+
+  connection.query("SELECT * FROM usuarios WHERE id_usuario = ?", [id_usuario], (error, results) => {
+    if (error) return res.status(500).json({ mensaje: "Error al obtener usuario" });
+    if (results.length === 0) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    res.status(200).json(results[0]);
+  });
+});
 
    app.get("/usuarios", authMiddleware, (req, res) => {
     if (!req.usuario.isAdmin) {

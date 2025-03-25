@@ -10,7 +10,7 @@ const doc = {
 };
 
 const outputFile = "./swagger_output.json";
-const endpointsFiles = ["./index.js"]; // O el archivo principal de tu servidor
+const endpointsFiles = ["./index.js"]; 
 
 swaggerAutogen(outputFile, endpointsFiles).then(() => {
     console.log("Documentación generada correctamente");

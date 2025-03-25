@@ -13,11 +13,14 @@ const secretKey = process.env.SECRET_KEY || "secreto_super_seguro"; // Clave sec
 
 // Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
-  const token = req.header("Authorization");
-  if (!token)
-    return res
-      .status(401)
-      .json({ mensaje: "Acceso denegado. No hay token." });
+  const authHeader = req.header("Authorization");
+  if (!authHeader) {
+    return res.status(401).json({ mensaje: "Acceso denegado. No hay token." });
+  }
+
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.split(" ")[1]
+    : authHeader;
 
   try {
     const decoded = jwt.verify(token, secretKey);
@@ -30,7 +33,6 @@ const authMiddleware = (req, res, next) => {
 
 // Obtener todos los administradores (acceso solo para administradores autenticados)
 app.get("/admin", authMiddleware, (req, res) => {
-  // En este ejemplo se asume que quien haga la petición es administrador (por el token)
   connection.query("SELECT * FROM administradores", (error, results) => {
     if (error)
       return res
@@ -40,7 +42,7 @@ app.get("/admin", authMiddleware, (req, res) => {
   });
 });
 
-// que solo ciertos roles (por ejemplo, Gerente) puedan registrar nuevos administradores.
+// Registrar nuevo administrador (acceso solo para ciertos roles, por ejemplo, Gerente)
 app.post("/admin", authMiddleware, async (req, res) => {
   const { nombre, apellido, correo, contraseña, rol } = req.body;
 
@@ -69,15 +71,15 @@ app.post("/admin", authMiddleware, async (req, res) => {
   }
 });
 
-// Editar administrador (solo el propio administrador puede editar sus datos)
+// Editar administrador (solo si el usuario autenticado es administrador)
 app.put("/admin/:id_admin", authMiddleware, async (req, res) => {
   const { id_admin } = req.params;
   const { nombre, apellido, correo, contraseña, rol } = req.body;
 
-  // Permitir edición solo si el administrador autenticado es el mismo que se desea modificar
-  if (req.admin.id !== parseInt(id_admin)) {
+  // Se permite la edición únicamente si el usuario autenticado tiene rol de "administrador"
+  if (req.admin.rol !== "Gerente") {
     return res.status(403).json({
-      mensaje: "Acceso denegado. No puedes modificar este administrador.",
+      mensaje: "Acceso denegado. Solo administradores pueden modificar este administrador.",
     });
   }
 
@@ -108,13 +110,14 @@ app.put("/admin/:id_admin", authMiddleware, async (req, res) => {
   }
 });
 
-// Eliminar administrador (solo el propio administrador puede eliminar su cuenta)
+// Eliminar administrador (solo si el usuario autenticado es Gerente)
 app.delete("/admin/:id_admin", authMiddleware, (req, res) => {
   const { id_admin } = req.params;
 
-  if (req.admin.id !== parseInt(id_admin)) {
+  // Validar que solo un Gerente pueda eliminar
+  if (req.admin.rol !== "Gerente") {
     return res.status(403).json({
-      mensaje: "Acceso denegado. No puedes eliminar este administrador.",
+      mensaje: "Acceso denegado. Solo Gerentes pueden eliminar este administrador.",
     });
   }
 
@@ -125,7 +128,7 @@ app.delete("/admin/:id_admin", authMiddleware, (req, res) => {
       if (error)
         return res
           .status(500)
-          .json({ mensaje: "Error al eliminar administrador" });
+          .json({ mensaje: "Error al eliminar administrador", error });
       if (results.affectedRows === 0) {
         return res
           .status(404)
@@ -135,5 +138,6 @@ app.delete("/admin/:id_admin", authMiddleware, (req, res) => {
     }
   );
 });
+
 
 module.exports = app;
