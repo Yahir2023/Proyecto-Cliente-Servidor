@@ -9,6 +9,24 @@ const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
 const { connection } = require("../config/config.db");
 
+// Para manejar la subida de archivos
+const multer = require("multer");
+const path = require("path");
+
+// Configuración de Multer para almacenar archivos en la carpeta "images"
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "images/"); // Guarda los archivos en la carpeta "images"
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Renombra el archivo con la fecha actual
+  },
+});
+const upload = multer({ storage });
+
+// Servir la carpeta "images" de forma estática
+app.use("/images", express.static("images"));
+
 // Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   let token = req.header("Authorization");
@@ -35,23 +53,15 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-// Solo accesible para administradores
-const getAllPeliculas = (req, res) => {
-  const query = "SELECT * FROM peliculas";
-  connection.query(query, (error, results) => {
-    if (error) return res.status(500).json({ mensaje: "Error al obtener películas" });
-    res.status(200).json(results);
-  });
-};
-
 /**
  * GET /peliculas
  * Permite filtrar películas por título, género y clasificación.
- * Disponible para cualquier usuario autenticado.
+ * Este endpoint es público para que todos puedan ver las películas.
+ * Se incluye el campo `ruta_imagen` (asegúrate de que esté agregado en la tabla).
  */
 const getPeliculas = (req, res) => {
   const { titulo, genero, clasificacion } = req.query;
-  let query = "SELECT * FROM peliculas WHERE 1=1";
+  let query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas WHERE 1=1";
   let filters = [];
 
   if (titulo) {
@@ -68,7 +78,22 @@ const getPeliculas = (req, res) => {
   }
 
   connection.query(query, filters, (error, results) => {
-    if (error) return res.status(500).json({ mensaje: "Error al obtener películas" });
+    if (error)
+      return res.status(500).json({ mensaje: "Error al obtener películas" });
+    res.status(200).json(results);
+  });
+};
+
+/**
+ * GET /admin/peliculas
+ * Muestra todas las películas (incluyendo las que pudieran ser filtradas para administradores)
+ * Solo accesible para administradores.
+ */
+const getAllPeliculas = (req, res) => {
+  const query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas";
+  connection.query(query, (error, results) => {
+    if (error)
+      return res.status(500).json({ mensaje: "Error al obtener películas" });
     res.status(200).json(results);
   });
 };
@@ -81,25 +106,34 @@ const getPeliculas = (req, res) => {
  * Se espera un body con la siguiente estructura:
  * {
  *   "titulo": "string",
- *   "duracion": "number",
+ *   "duracion": number,
  *   "clasificacion": "string",
  *   "sinopsis": "string",
  *   "director": "string",
- *   "genero": "string"
+ *   "genero": "string",
+ *   "ruta_imagen": "string" // URL o ruta de la imagen en el sistema de archivos
  * }
  */
 const postPelicula = (req, res) => {
-  const { titulo, duracion, clasificacion, sinopsis, director, genero } = req.body;
+  const { titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen } = req.body;
 
   const query = `
     INSERT INTO peliculas 
-    (titulo, duracion, clasificacion, sinopsis, director, genero) 
-    VALUES (?, ?, ?, ?, ?, ?)
+    (titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen) 
+    VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
-  connection.query(query, [titulo, duracion, clasificacion, sinopsis, director, genero], (error, results) => {
-    if (error) return res.status(500).json({ mensaje: "Error al agregar la película" });
-    res.status(201).json({ mensaje: "Película añadida correctamente", affectedRows: results.affectedRows });
-  });
+  connection.query(
+    query,
+    [titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen],
+    (error, results) => {
+      if (error)
+        return res.status(500).json({ mensaje: "Error al agregar la película" });
+      res.status(201).json({
+        mensaje: "Película añadida correctamente",
+        affectedRows: results.affectedRows,
+      });
+    }
+  );
 };
 
 /**
@@ -109,18 +143,24 @@ const postPelicula = (req, res) => {
  */
 const putPelicula = (req, res) => {
   const { id } = req.params;
-  const { titulo, duracion, clasificacion, sinopsis, director, genero } = req.body;
+  const { titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen } = req.body;
 
   const query = `
     UPDATE peliculas 
-    SET titulo = ?, duracion = ?, clasificacion = ?, sinopsis = ?, director = ?, genero = ?, updated_at = CURRENT_TIMESTAMP
+    SET titulo = ?, duracion = ?, clasificacion = ?, sinopsis = ?, director = ?, genero = ?, ruta_imagen = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id_pelicula = ?
   `;
-  connection.query(query, [titulo, duracion, clasificacion, sinopsis, director, genero, id], (error, results) => {
-    if (error) return res.status(500).json({ mensaje: "Error al actualizar la película" });
-    if (results.affectedRows === 0) return res.status(404).json({ mensaje: "Película no encontrada" });
-    res.status(200).json({ mensaje: "Película actualizada correctamente" });
-  });
+  connection.query(
+    query,
+    [titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, id],
+    (error, results) => {
+      if (error)
+        return res.status(500).json({ mensaje: "Error al actualizar la película" });
+      if (results.affectedRows === 0)
+        return res.status(404).json({ mensaje: "Película no encontrada" });
+      res.status(200).json({ mensaje: "Película actualizada correctamente" });
+    }
+  );
 };
 
 /**
@@ -133,18 +173,40 @@ const deletePelicula = (req, res) => {
   const query = "DELETE FROM peliculas WHERE id_pelicula = ?";
 
   connection.query(query, [id], (error, results) => {
-    if (error) return res.status(500).json({ mensaje: "Error al eliminar la película" });
-    if (results.affectedRows === 0) return res.status(404).json({ mensaje: "Película no encontrada para eliminar" });
+    if (error)
+      return res.status(500).json({ mensaje: "Error al eliminar la película" });
+    if (results.affectedRows === 0)
+      return res.status(404).json({ mensaje: "Película no encontrada para eliminar" });
     res.status(200).json({ mensaje: "Película eliminada correctamente" });
   });
 };
 
-app.route("/peliculas")
-   .get(authMiddleware, getPeliculas)
-   .post(authMiddleware, adminMiddleware, postPelicula);
+/**
+ * POST /admin/peliculas/upload
+ * Permite a un administrador subir una imagen.
+ * La imagen se guarda en la carpeta "images" y se devuelve la ruta para que luego se pueda asignar al campo `ruta_imagen`
+ */
+app.post("/admin/peliculas/upload", authMiddleware, adminMiddleware, upload.single("imagen"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ mensaje: "No se ha subido ninguna imagen" });
+  }
+  // Construimos la ruta de la imagen
+  const rutaImagen = `/images/${req.file.filename}`;
+  res.status(200).json({ mensaje: "Imagen subida con éxito", rutaImagen });
+});
 
-app.route("/peliculas/:id")
-   .put(authMiddleware, adminMiddleware, putPelicula)
-   .delete(authMiddleware, adminMiddleware, deletePelicula);
+// Rutas públicas para ver películas
+app.route("/peliculas").get(getPeliculas);
+
+// Rutas para administradores (deben enviar token válido)
+app
+  .route("/admin/peliculas")
+  .get(authMiddleware, adminMiddleware, getAllPeliculas)
+  .post(authMiddleware, adminMiddleware, postPelicula);
+
+app
+  .route("/peliculas/:id")
+  .put(authMiddleware, adminMiddleware, putPelicula)
+  .delete(authMiddleware, adminMiddleware, deletePelicula);
 
 module.exports = app;
