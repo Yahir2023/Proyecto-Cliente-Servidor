@@ -102,6 +102,58 @@ const getPagoById = (req, res) => {
 };
 
 /**
+ * PUT /pagos/:id_pago
+ * Actualiza un pago existente.
+ * Accesible solo para administradores.
+ */
+const putPago = (req, res) => {
+  const { id_pago } = req.params;
+  const { id_compra, metodo_pago, estado_pago, transaction_id, monto_pagado, paypal_email, fecha_pago } = req.body;
+  const query = `
+    UPDATE Pagos 
+    SET id_compra = ?, metodo_pago = ?, estado_pago = ?, transaction_id = ?, monto_pagado = ?, paypal_email = ?, fecha_pago = ? 
+    WHERE id_pago = ?
+  `;
+  connection.query(
+    query,
+    [id_compra, metodo_pago, estado_pago, transaction_id, monto_pagado, paypal_email, fecha_pago, id_pago],
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Error al actualizar el pago" });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ mensaje: "Pago no encontrado" });
+      }
+      return res.status(200).json({ mensaje: "Pago actualizado correctamente" });
+    }
+  );
+};
+
+/**
+ * DELETE /pagos/:id_pago
+ * Elimina un pago.
+ * Accesible solo para administradores.
+ */
+const deletePago = (req, res) => {
+  const { id_pago } = req.params;
+  connection.query(
+    "DELETE FROM Pagos WHERE id_pago = ?",
+    [id_pago],
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Error al eliminar el pago" });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ mensaje: "Pago no encontrado" });
+      }
+      return res.status(200).json({ mensaje: "Pago eliminado correctamente" });
+    }
+  );
+};
+
+/**
  * POST /pagos/:id_pago/confirmar
  * Confirma un pago (actualiza su estado a "completado").
  * Accesible solo para administradores.
@@ -215,12 +267,14 @@ const notificacionPago = (req, res) => {
   );
 };
 
-//solo accesibles para administradores.
+// Rutas públicas y protegidas
 router.get("/pagos", authMiddleware, adminMiddleware, getPagos);
 router.get("/pagos/:id_pago", authMiddleware, adminMiddleware, getPagoById);
-
-//cualquier usuario autenticado.
 router.post("/pagos", authMiddleware, postPago);
+
+// Rutas para actualizar y eliminar pagos (solo administradores)
+router.put("/pagos/:id_pago", authMiddleware, adminMiddleware, putPago);
+router.delete("/pagos/:id_pago", authMiddleware, adminMiddleware, deletePago);
 
 // Confirmar, cancelar y reembolsar pagos: acciones reservadas a administradores.
 router.post("/pagos/:id_pago/confirmar", authMiddleware, adminMiddleware, confirmarPago);

@@ -34,7 +34,24 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-//Permite filtrar promociones por descripción (cualquier usuario autenticado)
+router.get("/promociones/usuario/:id_usuario", authMiddleware, (req, res) => {
+  const { id_usuario } = req.params;
+
+  const query = `
+    SELECT p.* FROM promociones p
+    JOIN compras c ON p.id_promocion = c.id_promocion
+    WHERE c.id_usuario = ?
+  `;
+
+  connection.query(query, [id_usuario], (error, results) => {
+    if (error) {
+      console.error("Error al obtener promociones:", error);
+      return res.status(500).json({ error: "Error al obtener promociones" });
+    }
+    res.status(200).json(results);
+  });
+});
+
 router.get("/promociones", authMiddleware, (req, res) => {
   const { search } = req.query;
   

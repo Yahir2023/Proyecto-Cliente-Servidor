@@ -93,8 +93,8 @@ router.get('/compras/usuario/:id_usuario', authMiddleware, (req, res) => {
  * Si el usuario no es administrador, solo puede crear compras para sí mismo.
  */
 router.post('/compras', authMiddleware, (req, res) => {
-  const { id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_niños, total } = req.body;
-  if (!id_usuario || !id_funcion || !cantidad_adultos || !cantidad_niños || !total) {
+  const { id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_ninos, total } = req.body;
+  if (!id_usuario || !id_funcion || !cantidad_adultos || !cantidad_ninos || !total) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
   if (!req.usuario.isAdmin && req.usuario.id != id_usuario) {
@@ -102,10 +102,10 @@ router.post('/compras', authMiddleware, (req, res) => {
   }
   const query = `
     INSERT INTO compras 
-      (id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_niños, total, estado)
+      (id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_ninos, total, estado)
     VALUES (?, ?, ?, ?, ?, ?, 'pendiente')
   `;
-  connection.query(query, [id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_niños, total], (err, results) => {
+  connection.query(query, [id_usuario, id_funcion, id_promocion, cantidad_adultos, cantidad_ninos, total], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: 'Error al crear la compra' });
@@ -120,7 +120,7 @@ router.post('/compras', authMiddleware, (req, res) => {
  */
 router.put('/compras/:id', authMiddleware, (req, res) => {
   const idCompra = req.params.id;
-  const { id_funcion, id_promocion, cantidad_adultos, cantidad_niños, total } = req.body;
+  const { id_funcion, id_promocion, cantidad_adultos, cantidad_ninos, total } = req.body;
   const selectQuery = 'SELECT * FROM compras WHERE id_compra = ?';
   connection.query(selectQuery, [idCompra], (err, results) => {
     if (err) {
@@ -139,10 +139,10 @@ router.put('/compras/:id', authMiddleware, (req, res) => {
     }
     const updateQuery = `
       UPDATE compras 
-      SET id_funcion = ?, id_promocion = ?, cantidad_adultos = ?, cantidad_niños = ?, total = ?, updated_at = CURRENT_TIMESTAMP
+      SET id_funcion = ?, id_promocion = ?, cantidad_adultos = ?, cantidad_ninos = ?, total = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id_compra = ?
     `;
-    connection.query(updateQuery, [id_funcion, id_promocion, cantidad_adultos, cantidad_niños, total, idCompra], (err, updateResults) => {
+    connection.query(updateQuery, [id_funcion, id_promocion, cantidad_adultos, cantidad_ninos, total, idCompra], (err, updateResults) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ error: 'Error al actualizar la compra' });

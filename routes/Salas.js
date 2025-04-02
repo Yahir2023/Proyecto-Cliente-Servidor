@@ -114,4 +114,16 @@ router.delete('/salas/:id_sala', authMiddleware, (req, res) => {
     });
 });
 
-module.exports = router;
+// Obtener todos los tipos de sala
+router.get('/tipo_sala', (req, res) => {
+    const query = 'SELECT * FROM tipo_sala';
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).json({ error: 'Error al obtener los tipos de sala' });
+        }
+        res.status(200).json(results);
+    });
+});
+
+module.exports=router;

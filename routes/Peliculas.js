@@ -53,12 +53,6 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-/**
- * GET /peliculas
- * Permite filtrar películas por título, género y clasificación.
- * Este endpoint es público para que todos puedan ver las películas.
- * Se incluye el campo `ruta_imagen` (asegúrate de que esté agregado en la tabla).
- */
 const getPeliculas = (req, res) => {
   const { titulo, genero, clasificacion } = req.query;
   let query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas WHERE 1=1";
@@ -84,11 +78,6 @@ const getPeliculas = (req, res) => {
   });
 };
 
-/**
- * GET /admin/peliculas
- * Muestra todas las películas (incluyendo las que pudieran ser filtradas para administradores)
- * Solo accesible para administradores.
- */
 const getAllPeliculas = (req, res) => {
   const query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas";
   connection.query(query, (error, results) => {
@@ -98,24 +87,15 @@ const getAllPeliculas = (req, res) => {
   });
 };
 
-/**
- * POST /peliculas
- * Permite agregar una nueva película.
- * Solo accesible para administradores.
- *
- * Se espera un body con la siguiente estructura:
- * {
- *   "titulo": "string",
- *   "duracion": number,
- *   "clasificacion": "string",
- *   "sinopsis": "string",
- *   "director": "string",
- *   "genero": "string",
- *   "ruta_imagen": "string" // URL o ruta de la imagen en el sistema de archivos
- * }
- */
 const postPelicula = (req, res) => {
+  //console.log("Body recibido:", req.body);
+  //console.log("Headers:", req.headers);
+
   const { titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen } = req.body;
+
+  if (!ruta_imagen) {
+    return res.status(400).json({ mensaje: "La ruta de la imagen es obligatoria", body: req.body });
+  }
 
   const query = `
     INSERT INTO peliculas 
@@ -136,11 +116,6 @@ const postPelicula = (req, res) => {
   );
 };
 
-/**
- * PUT /peliculas/:id
- * Permite actualizar una película.
- * Solo accesible para administradores.
- */
 const putPelicula = (req, res) => {
   const { id } = req.params;
   const { titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen } = req.body;
@@ -163,11 +138,7 @@ const putPelicula = (req, res) => {
   );
 };
 
-/**
- * DELETE /peliculas/:id
- * Permite eliminar una película.
- * Solo accesible para administradores.
- */
+
 const deletePelicula = (req, res) => {
   const { id } = req.params;
   const query = "DELETE FROM peliculas WHERE id_pelicula = ?";
@@ -181,11 +152,6 @@ const deletePelicula = (req, res) => {
   });
 };
 
-/**
- * POST /admin/peliculas/upload
- * Permite a un administrador subir una imagen.
- * La imagen se guarda en la carpeta "images" y se devuelve la ruta para que luego se pueda asignar al campo `ruta_imagen`
- */
 app.post("/admin/peliculas/upload", authMiddleware, adminMiddleware, upload.single("imagen"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ mensaje: "No se ha subido ninguna imagen" });

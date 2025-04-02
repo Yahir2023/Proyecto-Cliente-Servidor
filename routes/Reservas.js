@@ -62,50 +62,37 @@ router.get('/reservas/:usuarioId', authMiddleware, (req, res) => {
 router.post('/reservas', authMiddleware, (req, res) => {
   const { usuarioId, disponibilidadId } = req.body;
 
-  if (!usuarioId || !disponibilidadId) {
-    return res.status(400).json({ error: 'Faltan campos obligatorios' });
-  }
-  // Si el usuario autenticado no es admin, solo puede crear reservas para sí mismo
-  if (!req.usuario.isAdmin && req.usuario.id != usuarioId) {
-    return res.status(403).json({ error: 'Acceso denegado. No puedes crear reservas para otro usuario.' });
+  if (!usuarioId || !disponibilidadId || isNaN(usuarioId) || isNaN(disponibilidadId)) {
+    return res.status(400).json({ error: 'Campos inválidos' });
   }
 
-  let conn;
-  connection.getConnection((err, connection) => {
+  if (!req.usuario.isAdmin && req.usuario.id != usuarioId) {
+    return res.status(403).json({ error: 'No puedes crear reservas para otro usuario' });
+  }
+
+  connection.getConnection((err, conn) => {
     if (err) {
       console.error(err);
-      return res.status(500).json({ error: 'Error al obtener la conexión' });
+      return res.status(500).json({ error: 'Error al conectar a la base de datos' });
     }
-    conn = connection;
 
-    conn.beginTransaction((err) => {
+    conn.beginTransaction(err => {
       if (err) {
         conn.release();
-        console.error(err);
         return res.status(500).json({ error: 'Error al iniciar transacción' });
       }
 
-      // Verificar disponibilidad del asiento
       conn.query(
         'SELECT estado FROM disponibilidad_asientos WHERE id_disponibilidad = ? FOR UPDATE',
         [disponibilidadId],
         (error, disponibilidad) => {
-          if (error) {
-            return conn.rollback(() => {
-              conn.release();
-              console.error(error);
-              return res.status(500).json({ error: 'Error al verificar disponibilidad' });
-            });
-          }
-
-          if (disponibilidad.length === 0 || disponibilidad[0].estado !== 'disponible') {
+          if (error || disponibilidad.length === 0 || disponibilidad[0].estado !== 'disponible') {
             return conn.rollback(() => {
               conn.release();
               return res.status(400).json({ error: 'Asiento no disponible' });
             });
           }
 
-          // Crear reserva
           conn.query(
             'INSERT INTO reservas (id_usuario, id_disponibilidad, estado) VALUES (?, ?, "activa")',
             [usuarioId, disponibilidadId],
@@ -113,35 +100,31 @@ router.post('/reservas', authMiddleware, (req, res) => {
               if (error) {
                 return conn.rollback(() => {
                   conn.release();
-                  console.error(error);
                   return res.status(500).json({ error: 'Error al crear la reserva' });
                 });
               }
 
-              // Actualizar disponibilidad del asiento
               conn.query(
                 'UPDATE disponibilidad_asientos SET estado = "reservado" WHERE id_disponibilidad = ?',
                 [disponibilidadId],
-                (error) => {
+                error => {
                   if (error) {
                     return conn.rollback(() => {
                       conn.release();
-                      console.error(error);
                       return res.status(500).json({ error: 'Error al actualizar disponibilidad' });
                     });
                   }
 
-                  conn.commit((err) => {
+                  conn.commit(err => {
                     if (err) {
                       return conn.rollback(() => {
                         conn.release();
-                        console.error(err);
                         return res.status(500).json({ error: 'Error al confirmar la reserva' });
                       });
                     }
 
                     conn.release();
-                    res.status(201).json({ message: 'Reserva creada exitosamente' });
+                    res.status(201).json({ message: 'Reserva creada exitosamente', id_reserva: result.insertId });
                   });
                 }
               );

@@ -5,7 +5,6 @@ const router = express.Router();
 const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 const { connection } = require("../config/config.db"); 
 
-// Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   let token = req.header("Authorization");
   if (!token) {
@@ -16,7 +15,7 @@ const authMiddleware = (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, secretKey);
-    req.usuario = decoded; // Se espera que el token incluya { id, isAdmin, ... }
+    req.usuario = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ error: "Token no válido" });
@@ -126,6 +125,24 @@ router.delete('/boletos/:id_boleto', authMiddleware, (req, res) => {
         if (results.affectedRows === 0) return res.status(404).json({ error: 'Boleto no encontrado' });
 
         res.status(200).json({ mensaje: 'Boleto eliminado exitosamente' });
+    });
+});
+
+router.put('/boletos/:id_boleto', authMiddleware, (req, res) => {
+    const { id_boleto } = req.params;
+    const { id_disponibilidad, tipo_boleto, precio_unitario, estado } = req.body;
+
+    if (!id_disponibilidad || !tipo_boleto || !precio_unitario || !estado) {
+        return res.status(400).json({ error: 'Datos incompletos' });
+    }
+
+    const query = `UPDATE boletos SET id_disponibilidad = ?, tipo_boleto = ?, precio_unitario = ?, estado = ? WHERE id_boleto = ?`;
+
+    connection.query(query, [id_disponibilidad, tipo_boleto, precio_unitario, estado, id_boleto], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el boleto' });
+        if (results.affectedRows === 0) return res.status(404).json({ error: 'Boleto no encontrado' });
+
+        res.status(200).json({ mensaje: 'Boleto actualizado exitosamente' });
     });
 });
 
