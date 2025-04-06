@@ -7,7 +7,6 @@ dotenv.config();
 const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 const { connection } = require("../config/config.db");
 
-// Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   let token = req.header("Authorization");
   if (!token) {

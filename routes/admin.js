@@ -9,7 +9,7 @@ const { connection } = require("../config/config.db");
 const app = express();
 app.use(express.json());
 
-const secretKey = process.env.SECRET_KEY || "secreto_super_seguro"; // Clave secreta para JWT
+const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
 // Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
