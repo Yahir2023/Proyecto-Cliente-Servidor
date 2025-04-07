@@ -267,6 +267,9 @@ const notificacionPago = (req, res) => {
   );
 };
 
+
+
+
 // Rutas públicas y protegidas
 router.get("/pagos", authMiddleware, adminMiddleware, getPagos);
 router.get("/pagos/:id_pago", authMiddleware, adminMiddleware, getPagoById);

@@ -9,25 +9,21 @@ const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
 const { connection } = require("../config/config.db");
 
-// Para manejar la subida de archivos
 const multer = require("multer");
 const path = require("path");
 
-// Configuración de Multer para almacenar archivos en la carpeta "images/promociones"
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "images/promociones"); // Guarda los archivos en "images/promociones"
+    cb(null, "images/promociones"); 
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Renombra el archivo con la fecha actual y su extensión
+    cb(null, Date.now() + path.extname(file.originalname)); 
   },
 });
 const upload = multer({ storage });
 
-// Servir la carpeta "images" de forma estática
 app.use("/images", express.static("images"));
 
-// Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   let token = req.header("Authorization");
   if (!token) {
@@ -38,14 +34,13 @@ const authMiddleware = (req, res, next) => {
   }
   try {
     const decoded = jwt.verify(token, secretKey);
-    req.usuario = decoded; // Se espera que el token incluya { id, isAdmin, ... }
+    req.usuario = decoded;
     next();
   } catch (error) {
     return res.status(401).json({ mensaje: "Token no válido" });
   }
 };
 
-// Middleware para validar que el usuario es administrador
 const adminMiddleware = (req, res, next) => {
   if (!req.usuario.isAdmin) {
     return res.status(403).json({ mensaje: "Acceso denegado. Solo administradores pueden realizar esta acción." });
@@ -53,7 +48,7 @@ const adminMiddleware = (req, res, next) => {
   next();
 };
 
-// Endpoint público para obtener promociones
+
 const getPromociones = (req, res) => {
   const query = "SELECT * FROM promociones";
   connection.query(query, (error, results) => {
@@ -62,7 +57,6 @@ const getPromociones = (req, res) => {
   });
 };
 
-// Endpoint para que el administrador agregue una nueva promoción (sin imagen)
 const postPromocion = (req, res) => {
   const { descripcion, tipo_descuento, valor_descuento, fecha_inicio, fecha_fin, ruta_imagen } = req.body;
 
@@ -88,7 +82,6 @@ const postPromocion = (req, res) => {
   );
 };
 
-// Endpoint para actualizar una promoción
 const putPromocion = (req, res) => {
   const { id } = req.params;
   const { descripcion, tipo_descuento, valor_descuento, fecha_inicio, fecha_fin, ruta_imagen } = req.body;
@@ -109,7 +102,6 @@ const putPromocion = (req, res) => {
   );
 };
 
-// Endpoint para eliminar una promoción
 const deletePromocion = (req, res) => {
   const { id } = req.params;
   const query = "DELETE FROM promociones WHERE id_promocion = ?";
@@ -120,12 +112,11 @@ const deletePromocion = (req, res) => {
   });
 };
 
-// Endpoint para subir una imagen para promociones (sólo administradores)
 app.post("/admin/promociones/upload", authMiddleware, adminMiddleware, upload.single("imagen"), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ mensaje: "No se ha subido ninguna imagen" });
   }
-  // Construimos la ruta de la imagen. Ejemplo: /images/promociones/1645678901234.jpg
+
   const rutaImagen = `/images/promociones/${req.file.filename}`;
   res.status(200).json({ mensaje: "Imagen subida con éxito", rutaImagen });
 });

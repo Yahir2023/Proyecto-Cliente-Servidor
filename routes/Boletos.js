@@ -35,6 +35,18 @@ router.get('/boletos', authMiddleware, (req, res) => {
     });
 });
 
+router.get('/BoletosUsuarios', authMiddleware, (req, res) => {
+    if (!req.usuario) {
+        return res.status(403).json({ error: 'Acceso denegado' });
+    }
+
+    const query = 'SELECT * FROM boletos';
+    connection.query(query, (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al obtener los boletos' });
+        res.status(200).json(results);
+    });
+});
+
 // Obtener boletos de un usuario
 router.get('/boletos/usuario/:id_usuario', authMiddleware, (req, res) => {
     const { id_usuario } = req.params;

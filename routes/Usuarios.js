@@ -35,6 +35,39 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+const enviarCorreoBienvenida = (destinatario, nombre) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_FROM,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: destinatario,
+    subject: "¡Bienvenido a nuestra plataforma!",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+        <h2 style="color: #4CAF50;">¡Hola ${nombre}!</h2>
+        <p>Gracias por registrarte en nuestra plataforma.</p>
+        <img src="https://media.giphy.com/media/OkJat1YNdoD3W/giphy.gif" alt="Bienvenido" width="200" />
+        <p>¡Esperamos que disfrutes tu experiencia!</p>
+      </div>
+    `,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error("Error al enviar correo de bienvenida:", error);
+    } else {
+      console.log("Correo de bienvenida enviado:", info.response);
+    }
+  });
+};
+
+
 // Obtener datos de un usuario en específico (para el propio usuario o administrador)
 app.get("/usuarios/:id_usuario", authMiddleware, (req, res) => {
   const { id_usuario } = req.params;
@@ -74,6 +107,10 @@ app.post("/usuarios", async (req, res) => {
       [nombre, apellido, correo, contraseñaEncriptada],
       (error, results) => {
         if (error) return res.status(500).json({ mensaje: "Error al registrar usuario" });
+
+        // Enviar correo de bienvenida
+        enviarCorreoBienvenida(correo, nombre);
+
         res.status(201).json({ mensaje: "Usuario registrado correctamente", id: results.insertId });
       }
     );
@@ -167,11 +204,6 @@ app.put("/usuarios/:id_usuario/password", authMiddleware, async (req, res) => {
   }
 });
 
-/* 
-  NUEVAS ENDPOINTS PARA RECUPERACIÓN DE CONTRASEÑA
-*/
-
-// Endpoint para solicitar el restablecimiento de contraseña
 app.post("/api/forgot-password", (req, res) => {
   const { correo } = req.body;
 
@@ -193,7 +225,6 @@ app.post("/api/forgot-password", (req, res) => {
         return res.status(200).json({ mensaje: "Si el correo existe, se enviará un enlace de recuperación" });
       }
 
-      // Configurar el transportador de email (ejemplo con Gmail)
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {

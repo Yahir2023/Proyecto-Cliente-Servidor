@@ -77,6 +77,12 @@ router.put('/funciones/:id_funcion', authMiddleware, (req, res) => {
         }
     );
 });
+router.get('/funcionesusuarios', authMiddleware, (req, res) => {
+    connection.query('SELECT * FROM funciones', (error, results) => {
+        if (error) return res.status(500).json({ error: 'Error al obtener funciones' });
+        res.status(200).json(results);
+    });
+});
 
 // Eliminar función de cine (Solo administradores)
 router.delete('/funciones/:id_funcion', authMiddleware, (req, res) => {
