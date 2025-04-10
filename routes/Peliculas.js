@@ -9,25 +9,21 @@ const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
 const { connection } = require("../config/config.db");
 
-// Para manejar la subida de archivos
 const multer = require("multer");
 const path = require("path");
 
-// Configuración de Multer para almacenar archivos en la carpeta "images"
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "images/"); // Guarda los archivos en la carpeta "images"
+    cb(null, "images/");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Renombra el archivo con la fecha actual
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 const upload = multer({ storage });
 
-// Servir la carpeta "images" de forma estática
 app.use("/images", express.static("images"));
 
-// Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   let token = req.header("Authorization");
   if (!token) {
@@ -45,10 +41,9 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
-// Middleware para validar que el usuario es administrador
 const adminMiddleware = (req, res, next) => {
   if (!req.usuario.isAdmin) {
-    return res.status(403).json({ mensaje: "Acceso denegado. Solo administradores pueden realizar esta acción." });
+    return res.status(403).json({ mensaje: "Solo administradores pueden realizar esta acción." });
   }
   next();
 };
@@ -72,8 +67,7 @@ const getPeliculas = (req, res) => {
   }
 
   connection.query(query, filters, (error, results) => {
-    if (error)
-      return res.status(500).json({ mensaje: "Error al obtener películas" });
+    if (error) return res.status(500).json({ mensaje: "Error al obtener películas" });
     res.status(200).json(results);
   });
 };
@@ -81,20 +75,16 @@ const getPeliculas = (req, res) => {
 const getAllPeliculas = (req, res) => {
   const query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas";
   connection.query(query, (error, results) => {
-    if (error)
-      return res.status(500).json({ mensaje: "Error al obtener películas" });
+    if (error) return res.status(500).json({ mensaje: "Error al obtener películas" });
     res.status(200).json(results);
   });
 };
 
 const postPelicula = (req, res) => {
-  //console.log("Body recibido:", req.body);
-  //console.log("Headers:", req.headers);
-
   const { titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen } = req.body;
 
-  if (!ruta_imagen) {
-    return res.status(400).json({ mensaje: "La ruta de la imagen es obligatoria", body: req.body });
+  if (!ruta_imagen || ruta_imagen.trim() === "") {
+    return res.status(400).json({ mensaje: "La ruta de la imagen es obligatoria" });
   }
 
   const query = `
@@ -106,8 +96,7 @@ const postPelicula = (req, res) => {
     query,
     [titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen],
     (error, results) => {
-      if (error)
-        return res.status(500).json({ mensaje: "Error al agregar la película" });
+      if (error) return res.status(500).json({ mensaje: "Error al agregar la película" });
       res.status(201).json({
         mensaje: "Película añadida correctamente",
         affectedRows: results.affectedRows,
@@ -129,25 +118,33 @@ const putPelicula = (req, res) => {
     query,
     [titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, id],
     (error, results) => {
-      if (error)
-        return res.status(500).json({ mensaje: "Error al actualizar la película" });
-      if (results.affectedRows === 0)
-        return res.status(404).json({ mensaje: "Película no encontrada" });
+      if (error) return res.status(500).json({ mensaje: "Error al actualizar la película" });
+      if (results.affectedRows === 0) return res.status(404).json({ mensaje: "Película no encontrada" });
       res.status(200).json({ mensaje: "Película actualizada correctamente" });
     }
   );
 };
 
+const getPeliculaById = (req, res) => {
+  const { id } = req.params;
+  const query = "SELECT id_pelicula, titulo, duracion, clasificacion, sinopsis, director, genero, ruta_imagen, created_at, updated_at FROM peliculas WHERE id_pelicula = ?";
+
+  connection.query(query, [id], (error, results) => {
+    if (error)
+      return res.status(500).json({ mensaje: "Error al obtener la película" });
+    if (results.length === 0)
+      return res.status(404).json({ mensaje: "Película no encontrada" });
+    res.status(200).json(results[0]);
+ });
+};
 
 const deletePelicula = (req, res) => {
   const { id } = req.params;
   const query = "DELETE FROM peliculas WHERE id_pelicula = ?";
 
   connection.query(query, [id], (error, results) => {
-    if (error)
-      return res.status(500).json({ mensaje: "Error al eliminar la película" });
-    if (results.affectedRows === 0)
-      return res.status(404).json({ mensaje: "Película no encontrada para eliminar" });
+    if (error) return res.status(500).json({ mensaje: "Error al eliminar la película" });
+    if (results.affectedRows === 0) return res.status(404).json({ mensaje: "Película no encontrada" });
     res.status(200).json({ mensaje: "Película eliminada correctamente" });
   });
 };
@@ -156,22 +153,19 @@ app.post("/admin/peliculas/upload", authMiddleware, adminMiddleware, upload.sing
   if (!req.file) {
     return res.status(400).json({ mensaje: "No se ha subido ninguna imagen" });
   }
-  // Construimos la ruta de la imagen
   const rutaImagen = `/images/${req.file.filename}`;
   res.status(200).json({ mensaje: "Imagen subida con éxito", rutaImagen });
 });
 
-// Rutas públicas para ver películas
+// Rutas
 app.route("/peliculas").get(getPeliculas);
 
-// Rutas para administradores (deben enviar token válido)
-app
-  .route("/admin/peliculas")
+app.route("/admin/peliculas")
   .get(authMiddleware, adminMiddleware, getAllPeliculas)
   .post(authMiddleware, adminMiddleware, postPelicula);
+  app.get("/peliculas/:id", getPeliculaById);
 
-app
-  .route("/peliculas/:id")
+app.route("/peliculas/:id")
   .put(authMiddleware, adminMiddleware, putPelicula)
   .delete(authMiddleware, adminMiddleware, deletePelicula);
 

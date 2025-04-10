@@ -12,9 +12,8 @@ const { connection } = require("../config/config.db");
 const app = express();
 app.use(express.json());
 
-const secretKey = process.env.SECRET_KEY || "secreto_super_seguro"; // Clave secreta para JWT
+const secretKey = process.env.SECRET_KEY || "secreto_super_seguro";
 
-// Middleware para validar el token JWT
 const authMiddleware = (req, res, next) => {
   const authHeader = req.header("Authorization");
   if (!authHeader) {
@@ -67,6 +66,23 @@ const enviarCorreoBienvenida = (destinatario, nombre) => {
   });
 };
 
+app.post("/api/verificar-token", (req, res) => {
+  const { token } = req.body;
+
+  connection.query(
+    "SELECT * FROM usuarios WHERE reset_token = ? AND reset_token_expira > NOW()",
+    [token],
+    (error, results) => {
+      if (error) return res.status(500).json({ mensaje: "Error en el servidor" });
+
+      if (results.length === 0) {
+        return res.status(400).json({ mensaje: "Token inválido o expirado" });
+      }
+
+      res.status(200).json({ mensaje: "Token válido" });
+    }
+  );
+});
 
 // Obtener datos de un usuario en específico (para el propio usuario o administrador)
 app.get("/usuarios/:id_usuario", authMiddleware, (req, res) => {
@@ -94,30 +110,43 @@ app.get("/usuarios", authMiddleware, (req, res) => {
   });
 });
 
-// Registrar un nuevo usuario (contraseña encriptada)
 app.post("/usuarios", async (req, res) => {
   try {
     const { nombre, apellido, correo, contraseña = "usuario" } = req.body;
 
-    const salt = await bcrypt.genSalt(10);
-    const contraseñaEncriptada = await bcrypt.hash(contraseña, salt);
-
+    // Verificar si ya existe un usuario con ese correo
     connection.query(
-      "INSERT INTO usuarios (nombre, apellido, correo, contraseña) VALUES (?, ?, ?, ?)",
-      [nombre, apellido, correo, contraseñaEncriptada],
-      (error, results) => {
-        if (error) return res.status(500).json({ mensaje: "Error al registrar usuario" });
+      "SELECT * FROM usuarios WHERE correo = ?",
+      [correo],
+      async (err, results) => {
+        if (err) return res.status(500).json({ mensaje: "Error al verificar el usuario" });
 
-        // Enviar correo de bienvenida
-        enviarCorreoBienvenida(correo, nombre);
+        if (results.length > 0) {
+          return res.status(409).json({ mensaje: "El usuario ya está registrado" });
+        }
 
-        res.status(201).json({ mensaje: "Usuario registrado correctamente", id: results.insertId });
+        // Encriptar contraseña
+        const salt = await bcrypt.genSalt(10);
+        const contraseñaEncriptada = await bcrypt.hash(contraseña, salt);
+
+        // Insertar nuevo usuario
+        connection.query(
+          "INSERT INTO usuarios (nombre, apellido, correo, contraseña) VALUES (?, ?, ?, ?)",
+          [nombre, apellido, correo, contraseñaEncriptada],
+          (error, results) => {
+            if (error) return res.status(500).json({ mensaje: "Error al registrar usuario" });
+
+            enviarCorreoBienvenida(correo, nombre);
+            res.status(201).json({ mensaje: "Usuario registrado correctamente", id: results.insertId });
+          }
+        );
       }
     );
   } catch (error) {
     res.status(500).json({ mensaje: "Error al registrar usuario" });
   }
 });
+
 
 // Editar usuario (solo el mismo usuario o administrador)
 app.put("/usuarios/:id_usuario", authMiddleware, async (req, res) => {
@@ -211,8 +240,8 @@ app.post("/api/forgot-password", (req, res) => {
     return res.status(400).json({ mensaje: "Correo es requerido" });
   }
 
-  const token = crypto.randomBytes(32).toString("hex");
-  const tokenExpira = new Date(Date.now() + 3600000); // 1 hora
+  const token = Math.floor(100000 + Math.random() * 900000).toString();
+  const tokenExpira = new Date(new Date(Date.now() + 10 * 60 * 1000));
 
   connection.query(
     "UPDATE usuarios SET reset_token = ?, reset_token_expira = ? WHERE correo = ?",
@@ -238,10 +267,13 @@ app.post("/api/forgot-password", (req, res) => {
       const mailOptions = {
         from: process.env.EMAIL_FROM,
         to: correo,
-        subject: "Recuperación de contraseña",
-        html: `<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
-               <p><a href="${resetUrl}">${resetUrl}</a></p>`,
-      };
+        subject: "Código para restablecer contraseña",
+        html: `
+          <h3>Tu código para restablecer la contraseña:</h3>
+          <p><b>${token}</b></p>
+          <p>Este código expirará en 10 minutos.</p>
+        `,
+      };      
 
       transporter.sendMail(mailOptions, (err, info) => {
         if (err) {
